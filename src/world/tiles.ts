@@ -20,6 +20,8 @@ export const TILE = {
   crystal: 7,
   bridgeH: 8,
   bridgeV: 9,
+  /** huella sólida de una pieza de escenario (se pinta como suelo bajo la pieza) */
+  prop: 10,
 } as const;
 export type TileName = keyof typeof TILE;
 export type TileId = (typeof TILE)[TileName];
@@ -43,6 +45,7 @@ export const TILE_PROPS: Record<TileId, TileProps> = {
   [TILE.crystal]: { walkable: false, island: true },
   [TILE.bridgeH]: { walkable: true, island: false },
   [TILE.bridgeV]: { walkable: true, island: false },
+  [TILE.prop]: { walkable: false, island: true },
 };
 
 /** Tamaño de un tile en celdas y en unidades del mundo. */

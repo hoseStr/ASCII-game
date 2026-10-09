@@ -3,5 +3,29 @@
   "name": "Lago de los Espejos",
   "zone": "lake",
   "map": "ow-2-2.txt",
-  "fireflies": 12
+  "fireflies": 12,
+  "props": [
+    {
+      "stamp": "lily-white",
+      "tile": [
+        8,
+        4
+      ]
+    },
+    {
+      "stamp": "lily-white",
+      "tile": [
+        22,
+        10
+      ],
+      "flip": true
+    },
+    {
+      "stamp": "lily-white",
+      "tile": [
+        9,
+        10
+      ]
+    }
+  ]
 }

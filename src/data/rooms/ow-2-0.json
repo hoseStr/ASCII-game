@@ -3,5 +3,21 @@
   "name": "Umbral del Santuario",
   "zone": "threshold",
   "map": "ow-2-0.txt",
-  "fireflies": 6
+  "fireflies": 6,
+  "props": [
+    {
+      "stamp": "log-fallen",
+      "tile": [
+        7,
+        8
+      ]
+    },
+    {
+      "stamp": "stump-moss",
+      "tile": [
+        12,
+        10
+      ]
+    }
+  ]
 }

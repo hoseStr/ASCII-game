@@ -16,6 +16,7 @@ import type { CellBuffer } from './cellBuffer';
 import { Program, RenderTarget, bindTex, createTexture, formats, type GL, type TexFormat } from './gl';
 import { EDGE_GLYPHS, MATERIALS, glyphIndex } from './glyphs';
 import { GpuTimer } from './gpuTimer';
+import { PROP_H, PROP_W } from './propLayer';
 import { computeLayout, type GridLayout } from './layout';
 import { FULLSCREEN_VERT, MAX_CRYSTALS, MAX_LIGHTS, MAX_PARTICLES, PARTICLE_STRIDE, shaderSources } from './shaders';
 import type { FontInfo } from './ttf';
@@ -108,6 +109,13 @@ export interface RoomRender {
   tileTex: Uint8Array;
 }
 
+/** Capa de piezas de la sala (ver render/propLayer.ts). */
+export interface PropLayerData {
+  lab: Float32Array;
+  info: Uint8Array;
+  sdf: Float32Array;
+}
+
 export const PASS_LABELS = ['pictórica', 'conversión', 'glifos', 'bloom', 'final'] as const;
 
 const TEMPORAL_TAU = 0.05; // s: constante del suavizado de luminancia por celda
@@ -141,6 +149,9 @@ export class Renderer {
   private readonly fieldTex: WebGLTexture;
   private readonly tilesTex: WebGLTexture;
   private readonly noiseTex: WebGLTexture;
+  private readonly propLabTex: WebGLTexture;
+  private readonly propInfoTex: WebGLTexture;
+  private readonly propSdfTex: WebGLTexture;
   private readonly semGlyphTex: WebGLTexture;
   private readonly semFgTex: WebGLTexture;
   private readonly semBgTex: WebGLTexture;
@@ -224,6 +235,10 @@ export class Renderer {
     const r8ui: TexFormat = { internalFormat: gl.R8UI, format: gl.RED_INTEGER, type: gl.UNSIGNED_BYTE, filter: gl.NEAREST };
     this.tilesTex = createTexture(gl, SCREEN_TILES_W, SCREEN_TILES_H, r8ui, new Uint8Array(SCREEN_TILES_W * SCREEN_TILES_H));
     this.noiseTex = createNoiseTexture(gl);
+    // Piezas de escenario: color OKLab premultiplicado (float, filtrable), info y SDF por celda.
+    this.propLabTex = createTexture(gl, PROP_W, PROP_H, { internalFormat: gl.RGBA16F, format: gl.RGBA, type: gl.FLOAT, filter: gl.LINEAR });
+    this.propInfoTex = createTexture(gl, PROP_W, PROP_H, this.fmt.rgba8);
+    this.propSdfTex = createTexture(gl, cols, rows, r16f, new Float32Array(cols * rows).fill(50));
     const rg16ui: TexFormat = { internalFormat: gl.RG16UI, format: gl.RG_INTEGER, type: gl.UNSIGNED_SHORT, filter: gl.NEAREST };
     this.semGlyphTex = createTexture(gl, cols, rows, rg16ui);
     this.semFgTex = createTexture(gl, cols, rows, this.fmt.rgba8);
@@ -237,8 +252,14 @@ export class Renderer {
   }
 
   /** Cambia de sala: SDF de islas, tiles para el horneado y paleta de zona. */
-  setRoom(room: RoomRender, palette: ZonePaletteGpu): void {
+  setRoom(room: RoomRender, palette: ZonePaletteGpu, props: PropLayerData): void {
     const gl = this.gl;
+    gl.bindTexture(gl.TEXTURE_2D, this.propLabTex);
+    gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, PROP_W, PROP_H, gl.RGBA, gl.FLOAT, props.lab);
+    gl.bindTexture(gl.TEXTURE_2D, this.propInfoTex);
+    gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, PROP_W, PROP_H, gl.RGBA, gl.UNSIGNED_BYTE, props.info);
+    gl.bindTexture(gl.TEXTURE_2D, this.propSdfTex);
+    gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, this.cols, this.rows, gl.RED, gl.FLOAT, props.sdf);
     gl.bindTexture(gl.TEXTURE_2D, this.fieldTex);
     gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, this.cols, this.rows, gl.RED, gl.FLOAT, room.field);
     gl.bindTexture(gl.TEXTURE_2D, this.tilesTex);
@@ -349,6 +370,9 @@ export class Renderer {
     bindTex(gl, p, 'uField', 0, this.fieldTex);
     bindTex(gl, p, 'uTiles', 1, this.tilesTex);
     bindTex(gl, p, 'uNoise', 2, this.noiseTex);
+    bindTex(gl, p, 'uPropLab', 3, this.propLabTex);
+    bindTex(gl, p, 'uPropInfo', 4, this.propInfoTex);
+    bindTex(gl, p, 'uPropSdf', 5, this.propSdfTex);
     gl.uniform3fv(p.u('uPal'), pal.surfaceOklab);
     gl.uniform1i(p.u('uOctaves'), octaves);
     gl.uniform1i(p.u('uCliffSteps'), 48);
@@ -614,7 +638,7 @@ export class Renderer {
       this.progFinal,
     ])
       prog.dispose();
-    for (const t of [this.fieldTex, this.tilesTex, this.noiseTex, this.semGlyphTex, this.semFgTex, this.semBgTex, this.atlasTex, this.rampsTex]) {
+    for (const t of [this.fieldTex, this.tilesTex, this.noiseTex, this.propLabTex, this.propInfoTex, this.propSdfTex, this.semGlyphTex, this.semFgTex, this.semBgTex, this.atlasTex, this.rampsTex]) {
       if (t) gl.deleteTexture(t);
     }
     for (const rt of [...this.compose, this.snapshot, this.pict, this.terrain, this.scene, ...this.bloomDown, ...this.bloomUp]) {

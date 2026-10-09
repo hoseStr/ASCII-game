@@ -1,0 +1,35 @@
+{
+  "id": "log-fallen",
+  "image": "log-fallen.png",
+  "use": "prop",
+  "sizeTiles": [
+    4,
+    2
+  ],
+  "cells": [
+    20,
+    6
+  ],
+  "samples": 4,
+  "ramp": "base",
+  "solid": true,
+  "footprint": [
+    "....",
+    "####"
+  ],
+  "tint": {
+    "slot": "trunk",
+    "strength": 0.55,
+    "keepChroma": 0.45
+  },
+  "lum": [
+    0.2448,
+    0.7137
+  ],
+  "credits": {
+    "title": "20241030-FS-SNF-SR-002",
+    "author": "Superior National Forest",
+    "license": "PDM-1.0",
+    "sourceUrl": "https://www.flickr.com/photos/53801642@N06/54107399549"
+  }
+}

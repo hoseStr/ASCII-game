@@ -176,6 +176,7 @@ void main() {
 
   // --- promedio del bloque (igual que el repo) y material de mayor peso -----------
   vec3 sum = vec3(0.0);
+  float propCov = 0.0;
   float bestW = -1.0;
   int mat = 0;
   for (int y = 0; y < uS; y++) {
@@ -184,6 +185,7 @@ void main() {
       sum += texelFetch(uPict, q, 0).rgb;
       vec4 m = texelFetch(uMat, q, 0);
       if (m.g > bestW) { bestW = m.g; mat = int(m.r * 255.0 + 0.5); }
+      propCov += m.b;
     }
   }
   vec3 avg = sum / float(uS * uS);
@@ -220,7 +222,10 @@ void main() {
   // El despeje vacía de glifos el entorno de la entidad, pero conserva el fondo
   // pintado: alrededor de una luz no queda un hueco oscuro, sino su resplandor.
   vec3 fg = clamp(avgc * uInkGain, 0.0, 1.0) * (1.0 - 0.45 * uClearance * clear);
-  vec3 bg = uPaper + avgc * uBgFill * (1.0 + 0.6 * clear);
+  // Las piezas de escenario llevan un fondo pintado más denso: se leen como una masa
+  // de color (la silueta de la foto) con la textura de glifos encima.
+  propCov /= float(uS * uS);
+  vec3 bg = uPaper + avgc * (uBgFill * (1.0 + 0.6 * clear) + (uLegibility == 1 ? 0.0 : 0.3 * propCov));
   float lum = luminance(avg);
   float emissive = smoothstep(0.45, 1.1, lum);
 

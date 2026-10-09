@@ -3,5 +3,21 @@
   "name": "Jardín de Cristal",
   "zone": "garden",
   "map": "ow-0-0.txt",
-  "fireflies": 14
+  "fireflies": 14,
+  "props": [
+    {
+      "stamp": "bush-azalea",
+      "tile": [
+        22,
+        8
+      ]
+    },
+    {
+      "stamp": "mushroom-gold",
+      "tile": [
+        15,
+        10
+      ]
+    }
+  ]
 }

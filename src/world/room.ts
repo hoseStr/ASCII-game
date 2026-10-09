@@ -5,6 +5,7 @@
  */
 import { CELL_ASPECT, GRID_COLS, GRID_ROWS } from '../config';
 import { blurField, signedDistanceField } from '../render/field';
+import type { PropPlacement } from './props';
 import {
   HUD_ROWS,
   LEGEND,
@@ -25,6 +26,8 @@ export interface RoomMeta {
   zone: string;
   map: string;
   fireflies?: number;
+  /** piezas de escenario (estampas fotográficas); ver src/world/props.ts */
+  props?: PropPlacement[];
 }
 
 export interface Tilemap {

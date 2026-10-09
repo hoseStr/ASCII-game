@@ -96,6 +96,57 @@ Los sprites son texto: `src/data/sprites/princess.txt` y `princess.json`.
 - La vista izquierda se genera espejando la derecha.
 - Los glifos de entidades salen de un conjunto reservado que el decorado nunca usa. Un test lo verifica.
 
+## Piezas de escenario: fotos convertidas a ASCII
+
+El repositorio original convierte fotos y video en texto, y el juego hace lo mismo con su escenario.
+
+- **Qué son.** Rocas con musgo, amanitas, helechos, tocones, troncos, nenúfares, columnas antiguas y azaleas parten de **fotos reales en dominio público o CC0**.
+- **Cómo se pintan.** Entran en la capa pictórica y se convierten a ASCII en vivo con el algoritmo del repo. Por eso reciben el tinte de la paleta de su zona, la luz dinámica, la niebla y la respiración como el resto del mundo.
+- **Rocas `#`.** Cada grupo de rocas contiguas toma la textura de una foto de roca. Su forma, su colisión y su contorno siguen saliendo de los tiles.
+- **Excepción al brief.** El brief original decía "no uses imágenes externas"; esta mejora lo cambia a propósito.
+  - Solo se aceptan fotos CC0 o de dominio público, con la licencia verificada en la página de origen.
+  - Cada foto queda registrada en `art/manifest.json` y acreditada en THIRD_PARTY_NOTICES.
+
+En el juego:
+
+- **Colocación.** Las piezas se colocan desde el JSON de la sala, en la clave `props`.
+- **Colisión.** Las piezas sólidas bloquean según su **huella**, que se calcula por tile a partir del alfa de la foto. Las que se ven altas (columna, setas, tocón) solo bloquean por la base.
+- **Legibilidad.** Para que se lean como objetos llevan un **fondo pintado** más denso, un **contorno por fuera** de la silueta que no se come la foto y un anillo de sombra.
+- **Piezas decorativas.** El helecho y los nenúfares no bloquean ni llevan contorno.
+- **Depuración.** La página `/debug/stamps.html` muestra cada estampa: la imagen procesada, la conversión literal del repo y el resultado en cada zona.
+
+### Cómo añadir una imagen al escenario
+
+1. **Busca** una foto CC0 o de dominio público. Lo más fácil es un sujeto que se separe bien del fondo.
+   ```bash
+   python -P tools/find_images.py "mossy boulder"            # Openverse, solo cc0/pdm
+   python -P tools/find_images.py "fern" --source commons    # Wikimedia Commons
+   ```
+2. **Verifica la licencia** en la página de la foto. Guárdala en `art/sources/<id>.jpg` (1024 px como máximo) y añádela a `art/manifest.json` con su título, autor, URL y licencia (`CC0-1.0` o `PDM-1.0`).
+3. **Define la estampa** en `art/stamps.json`:
+   - `rect`: el sujeto, en coordenadas de 0 a 1;
+   - `mode`: `grabcut`, `key-dark` para fondo negro o `rect` para texturas;
+   - `sizeTiles`, `solid`, `collision` (`alpha` o `base`);
+   - `tint`: `slot` de la paleta, `strength` y `keepChroma`;
+   - opcionales: `fg` y `bg`, rectángulos de sujeto o fondo seguros que guían a GrabCut.
+4. **Procésala:**
+   ```bash
+   python -m venv .cache/venv-tools && .cache/venv-tools/Scripts/python -m pip install -r tools/requirements.txt   # una vez
+   .cache/venv-tools/Scripts/python -P tools/make_stamps.py
+   ```
+   El script genera:
+   - `src/assets/stamps/<id>.png`;
+   - `src/data/stamps/<id>.json`, con la huella y los créditos;
+   - la vista previa literal del repo;
+   - la sección de créditos;
+   - una hoja de revisión en `shots/stamps-contact.png`.
+5. **Colócala** en una sala: `"props": [{ "stamp": "<id>", "tile": [x, y], "flip": false }]`, con `tile` como esquina superior izquierda.
+6. **Valida** con `npm test`, que comprueba:
+   - licencias, tamaños y huellas;
+   - que el port de TypeScript reproduce al 100 % la vista previa literal del repo;
+   - que la huella cae sobre suelo;
+   - que ninguna sala queda bloqueada.
+
 ## Arquitectura del render
 
 ```
@@ -122,6 +173,8 @@ Los sprites son texto: `src/data/sprites/princess.txt` y `princess.json`.
 ```
 
 ### Reparto entre capas
+
+- **Piezas de escenario:** se componen en CPU una vez por sala, con el tinte de zona, en una capa de 4 muestras por celda. El horneado del terreno (P0) las lee como una superficie más, con su material.
 
 - **Capa pictórica:** todo el terreno natural, incluidos los obstáculos (rocas, árboles, agua, vacío). Así recibe la luz dinámica, y la Linterna Lunar de la Fase 4 podrá revelar zonas oscuras.
 - **Capa semántica:** estructuras construidas (puentes), entidades y HUD.
@@ -171,7 +224,8 @@ Mediciones en una **Intel UHD Graphics integrada** (Alder Lake, D3D11) con Micro
 
 - **Fotogramas:** 60 fps estables en las 9 salas y durante las transiciones. La variación del total sigue a la frecuencia dinámica de la GPU integrada.
 - **1366×768:** unos 4,1 ms de GPU.
-- **Arranque:** unos 80 ms; los 10 programas compilan en unos 25 ms.
+- **Arranque:** unos 80–230 ms, incluida la decodificación de las 12 estampas. Los 10 programas compilan en unos 25 ms.
+- **Piezas de escenario:** la composición de la capa al entrar en una sala tarda 0,6–3 ms en caliente; ocurre solo al cambiar de sala. Con piezas, la GPU sigue en 5,4–6,8 ms por fotograma a 1080p.
 - **CPU:** 0,05 ms de simulación y 0,3–0,6 ms de preparación del render por fotograma.
 - **Cero allocations en el bucle caliente:** el heap JS crece 0 bytes/s, medido por `npm run shots`.
 
@@ -187,9 +241,11 @@ src/
   entities/princess.ts   la princesa
   systems/               partículas (pool), luciérnagas, cielo, luz en CPU
   ui/                    HUD, overlay F3
-  data/                  salas (.txt + .json), mundo, leyenda, paletas, sprites
-tests/                   fidelidad dorada, fuente, legibilidad, núcleo, layout, mundo, colisión, sistemas
-tools/                   make_golden.py (fixtures), screenshot.mjs (capturas + métricas)
+  data/                  salas (.txt + .json), mundo, leyenda, paletas, sprites, estampas (generadas)
+  assets/stamps/         estampas procesadas (PNG de 4 muestras por celda)
+art/                     fotos originales (CC0 / dominio público), manifiesto de licencias y definición de estampas
+tests/                   fidelidad dorada, fuente, legibilidad, núcleo, layout, mundo, colisión, sistemas, estampas
+tools/                   make_golden.py (fixtures), make_stamps.py y find_images.py (estampas), screenshot.mjs (capturas)
 ```
 
 ## Licencias

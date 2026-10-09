@@ -3,5 +3,22 @@
   "name": "Escalinata Lunar",
   "zone": "ruins",
   "map": "ow-1-0.txt",
-  "fireflies": 10
+  "fireflies": 10,
+  "props": [
+    {
+      "stamp": "column",
+      "tile": [
+        12,
+        6
+      ]
+    },
+    {
+      "stamp": "column",
+      "tile": [
+        17,
+        6
+      ],
+      "flip": true
+    }
+  ]
 }

@@ -3,5 +3,22 @@
   "name": "Raíces Colgantes",
   "zone": "forestDeep",
   "map": "ow-0-2.txt",
-  "fireflies": 28
+  "fireflies": 28,
+  "props": [
+    {
+      "stamp": "log-fallen",
+      "tile": [
+        12,
+        7
+      ]
+    },
+    {
+      "stamp": "fern",
+      "tile": [
+        16,
+        5
+      ],
+      "flip": true
+    }
+  ]
 }

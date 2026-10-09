@@ -168,6 +168,20 @@ if (want('atlas')) {
   await page.close();
 }
 
+if (want('stamps')) {
+  const page = await browser.newPage({ viewport: { width: 1400, height: 900 } });
+  const errors = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  page.on('console', (m) => {
+    if (m.type() === 'error') errors.push(m.text());
+  });
+  await page.goto(`${base}debug/stamps.html`);
+  await page.waitForFunction(() => document.body.dataset.ready === '1', null, { timeout: 30000 });
+  await page.screenshot({ path: resolve(outDir, 'stamps-page.png'), fullPage: true });
+  report.pages.stamps = { errors };
+  await page.close();
+}
+
 writeFileSync(resolve(outDir, 'stats.json'), JSON.stringify(report, null, 2));
 console.log(JSON.stringify(report, null, 2));
 await browser.close();

@@ -1,0 +1,35 @@
+{
+  "id": "rock-granite",
+  "image": "rock-granite.png",
+  "use": "rockfill",
+  "sizeTiles": [
+    2,
+    2
+  ],
+  "cells": [
+    10,
+    6
+  ],
+  "samples": 4,
+  "ramp": "base",
+  "solid": false,
+  "footprint": [
+    "..",
+    ".."
+  ],
+  "tint": {
+    "slot": "rock",
+    "strength": 0.75,
+    "keepChroma": 0.3
+  },
+  "lum": [
+    0.1184,
+    0.6084
+  ],
+  "credits": {
+    "title": "Granite Boulder and Rock Varnish",
+    "author": "Joshua Tree National Park",
+    "license": "PDM-1.0",
+    "sourceUrl": "https://www.flickr.com/photos/115357548@N08/51916592018"
+  }
+}

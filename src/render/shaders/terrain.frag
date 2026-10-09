@@ -17,6 +17,10 @@ uniform vec3 uPal[PAL_SIZE];
 uniform int uOctaves;
 uniform int uCliffSteps;   // 48 · límites uniform: bucles reales en D3D (compilación rápida)
 uniform int uOne;          // 1: radio de las vecindades 3×3
+// Piezas de escenario (fotos convertidas; ver render/propLayer.ts)
+uniform sampler2D uPropLab;   // OKLab premultiplicado + alfa, 4 muestras por celda
+uniform sampler2D uPropInfo;  // r: material + 1, g: modo (1 pieza, 2 textura de roca), b: sólida
+uniform sampler2D uPropSdf;   // SDF de las piezas sólidas, por celda
 
 layout(location = 0) out vec4 oTerrain;
 layout(location = 1) out vec4 oSurface;
@@ -150,9 +154,27 @@ void main() {
     if (s > 0.5) kind = float(K_SHORE);
   }
 
+  // --- capa de piezas en este punto ----------------------------------------------------
+  vec2 puv = gl_FragCoord.xy / (uGrid * uSamples);
+  vec4 pLab = textureLod(uPropLab, puv, 0.0);
+  vec4 pInfo = textureLod(uPropInfo, puv, 0.0);
+  int pMode = int(pInfo.g * 255.0 + 0.5);
+  vec3 photo = pLab.xyz / max(pLab.w, 1e-3);
+
   // --- rocas: bloques en vista 3/4 (cara superior clara, frente oscuro con estratos) ---
   float rockD = typeSdf(p, T_ROCK, 0.0, 0.45) + edgeNoise * 0.25;
-  if (rockD < 0.0) {
+  if (rockD < 0.0 && pMode == 2) {
+    // Textura fotográfica (tinte de zona ya aplicado); el volumen 3/4 se conserva.
+    float below = typeSdf(p + vec2(0.0, 1.3), T_ROCK, 0.0, 0.45) + edgeNoise * 0.25;
+    lab = photo;
+    if (below > 0.0) {
+      lab.x *= 0.62;
+      kind = float(K_ROCK_FRONT);
+    } else {
+      lab.x -= 0.08 * smoothstep(-0.8, 0.0, rockD);
+      kind = float(K_ROCK);
+    }
+  } else if (rockD < 0.0) {
     float below = typeSdf(p + vec2(0.0, 1.3), T_ROCK, 0.0, 0.45) + edgeNoise * 0.25;
     float strata = fbm(vec3(p.x * 1.8, p.y * 0.3, 13.0), 3);
     if (below > 0.0) {
@@ -207,9 +229,19 @@ void main() {
     shadow = 1.0;
   }
 
+  // --- piezas de escenario: encima del terreno, con el material de su rampa ---------------
+  if (pMode == 1 && pLab.w > 0.5) {
+    int pMat = int(pInfo.r * 255.0 + 0.5) - 1;
+    lab = photo;
+    kind = float(K_PROP + pMat);
+    shadow = 1.0;
+  }
+  float propD = textureLod(uPropSdf, cellPos / uGrid, 0.0).r;
+
   // --- obstáculos: un único SDF (negativo dentro) para los contornos de tinta ----------
   float crystalD = typeSdf(p, T_CRYSTAL, 0.0, 0.6);
-  float obstacleD = min(min(rockD, waterD), min(min(canopyD, trunkD), crystalD));
+  // Las piezas se contornean POR FUERA (región agrandada 0,75 u): la foto queda intacta.
+  float obstacleD = min(min(min(rockD, waterD), min(canopyD, trunkD)), min(crystalD, propD - 0.75));
   if (obstacleD > 0.0 && obstacleD < 0.8 && kind != float(K_PATH)) {
     shadow = min(shadow, mix(0.45, 1.0, smoothstep(0.0, 0.8, obstacleD))); // anillo de sombra
   }

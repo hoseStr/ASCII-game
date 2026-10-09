@@ -156,7 +156,7 @@ void main() {
     vec3 lab = surf.xyz;
     if (kind == K_GROUND) lab = mix(lab, uPal[P_RIM], max(ex.x, 0.0) * 0.55);
     // Las copas y la roca reciben más cielo que el suelo del bosque; los frentes, menos.
-    float face = kind == K_CANOPY ? 1.5 : kind == K_ROCK ? 1.12 : (kind == K_ROCK_FRONT || kind == K_TRUNK ? 0.7 : 1.0);
+    float face = kind >= K_PROP ? 1.0 : kind == K_CANOPY ? 1.5 : kind == K_ROCK ? 1.12 : (kind == K_ROCK_FRONT || kind == K_TRUNK ? 0.7 : 1.0);
     col = mix(col, oklabToLinear(lab) * lightSum * face, groundA);
   }
 
@@ -208,7 +208,8 @@ void main() {
   if (surfW > best) {
     best = surfW;
     mat = float(MAT_VEG);
-    if (kind == K_WATER) mat = float(MAT_WATER);
+    if (kind >= K_PROP) mat = float(kind - K_PROP); // piezas: el material de su rampa
+    else if (kind == K_WATER) mat = float(MAT_WATER);
     else if (kind == K_CANOPY) mat = float(MAT_FOLIAGE);
     else if (kind == K_ROCK || kind == K_ROCK_FRONT || kind == K_TRUNK) mat = float(MAT_BASE);
     else if (kind == K_PATH || kind == K_SHORE) mat = float(MAT_PATH);
@@ -218,5 +219,7 @@ void main() {
   if (wCrystal > best) { best = wCrystal; mat = float(MAT_CRYSTAL); }
 
   oColor = vec4(linearToSrgb(col), 1.0);
-  oMat = vec4(mat / 255.0, best / (1.0 + best), 0.0, 1.0);
+  // b: la muestra pertenece a una pieza de escenario (la conversión le pinta un fondo más denso)
+  float isProp = kind >= K_PROP ? groundA : 0.0;
+  oMat = vec4(mat / 255.0, best / (1.0 + best), isProp, 1.0);
 }

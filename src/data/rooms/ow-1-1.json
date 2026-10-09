@@ -3,5 +3,28 @@
   "name": "Claro de las Luciérnagas",
   "zone": "forest",
   "map": "ow-1-1.txt",
-  "fireflies": 26
+  "fireflies": 26,
+  "props": [
+    {
+      "stamp": "mushrooms-red",
+      "tile": [
+        23,
+        8
+      ]
+    },
+    {
+      "stamp": "mushroom-gold",
+      "tile": [
+        6,
+        8
+      ]
+    },
+    {
+      "stamp": "fern",
+      "tile": [
+        12,
+        11
+      ]
+    }
+  ]
 }

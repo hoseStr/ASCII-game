@@ -10,6 +10,7 @@ export default defineConfig({
       input: {
         main: resolve(import.meta.dirname, 'index.html'),
         atlas: resolve(import.meta.dirname, 'debug/atlas.html'),
+        stamps: resolve(import.meta.dirname, 'debug/stamps.html'),
       },
     },
   },

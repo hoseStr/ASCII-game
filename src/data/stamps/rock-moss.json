@@ -1,0 +1,35 @@
+{
+  "id": "rock-moss",
+  "image": "rock-moss.png",
+  "use": "rockfill",
+  "sizeTiles": [
+    2,
+    2
+  ],
+  "cells": [
+    10,
+    6
+  ],
+  "samples": 4,
+  "ramp": "base",
+  "solid": false,
+  "footprint": [
+    "..",
+    ".."
+  ],
+  "tint": {
+    "slot": "rock",
+    "strength": 0.7,
+    "keepChroma": 0.35
+  },
+  "lum": [
+    0.333,
+    0.8187
+  ],
+  "credits": {
+    "title": "tree_stump_with_moss23",
+    "author": "Juhele_CZ",
+    "license": "CC0-1.0",
+    "sourceUrl": "https://www.flickr.com/photos/96541566@N06/51435082195"
+  }
+}

@@ -1,0 +1,322 @@
+{
+  "description": "Definición de las estampas (piezas de escenario hechas con fotos). Procesar con: .cache/venv-tools/Scripts/python -P tools/make_stamps.py. rect = [x0, y0, x1, y1] normalizado sobre la foto; sizeTiles = [ancho, alto] en tiles (1 tile = 5×3 celdas = 3×3 unidades).",
+  "stamps": [
+    {
+      "id": "boulder-moss",
+      "source": "boulder-moss",
+      "mode": "grabcut",
+      "rect": [
+        0.27,
+        0.27,
+        0.93,
+        0.9
+      ],
+      "use": "prop",
+      "sizeTiles": [
+        4,
+        3
+      ],
+      "ramp": "base",
+      "solid": true,
+      "collision": "alpha",
+      "tint": {
+        "slot": "moss",
+        "strength": 0.55,
+        "keepChroma": 0.45
+      }
+    },
+    {
+      "id": "mushrooms-red",
+      "source": "mushrooms-red",
+      "mode": "grabcut",
+      "rect": [
+        0.08,
+        0.03,
+        0.64,
+        0.95
+      ],
+      "use": "prop",
+      "sizeTiles": [
+        3,
+        3
+      ],
+      "ramp": "base",
+      "solid": true,
+      "collision": "base",
+      "tint": {
+        "slot": "flowerB",
+        "strength": 0.35,
+        "keepChroma": 0.75
+      }
+    },
+    {
+      "id": "mushroom-gold",
+      "source": "mushroom-gold",
+      "mode": "grabcut",
+      "rect": [
+        0.06,
+        0.17,
+        0.97,
+        0.9
+      ],
+      "use": "prop",
+      "sizeTiles": [
+        2,
+        2
+      ],
+      "ramp": "base",
+      "solid": true,
+      "collision": "base",
+      "tint": {
+        "slot": "flower",
+        "strength": 0.55,
+        "keepChroma": 0.7
+      },
+      "fg": [
+        [
+          0.36,
+          0.6,
+          0.5,
+          0.84
+        ],
+        [
+          0.2,
+          0.3,
+          0.85,
+          0.5
+        ]
+      ],
+      "bg": [
+        [
+          0.58,
+          0.58,
+          1.0,
+          1.0
+        ],
+        [
+          0.0,
+          0.62,
+          0.26,
+          1.0
+        ]
+      ]
+    },
+    {
+      "id": "fern",
+      "source": "fern",
+      "mode": "key-dark",
+      "rect": [
+        0.08,
+        0.0,
+        0.94,
+        1.0
+      ],
+      "threshold": 0.13,
+      "use": "prop",
+      "sizeTiles": [
+        2,
+        3
+      ],
+      "ramp": "base",
+      "solid": false,
+      "collision": "none",
+      "tint": {
+        "slot": "canopy",
+        "strength": 0.6,
+        "keepChroma": 0.5
+      }
+    },
+    {
+      "id": "stump-moss",
+      "source": "stump-moss",
+      "mode": "grabcut",
+      "rect": [
+        0.25,
+        0.05,
+        0.71,
+        0.9
+      ],
+      "use": "prop",
+      "sizeTiles": [
+        2,
+        3
+      ],
+      "ramp": "base",
+      "solid": true,
+      "collision": "base",
+      "tint": {
+        "slot": "moss",
+        "strength": 0.5,
+        "keepChroma": 0.5
+      }
+    },
+    {
+      "id": "log-fallen",
+      "source": "log-fallen",
+      "mode": "grabcut",
+      "rect": [
+        0.0,
+        0.32,
+        1.0,
+        0.9
+      ],
+      "use": "prop",
+      "sizeTiles": [
+        4,
+        2
+      ],
+      "ramp": "base",
+      "solid": true,
+      "collision": "base",
+      "tint": {
+        "slot": "trunk",
+        "strength": 0.55,
+        "keepChroma": 0.45
+      }
+    },
+    {
+      "id": "lily-white",
+      "source": "lily-white",
+      "mode": "grabcut",
+      "rect": [
+        0.25,
+        0.15,
+        0.73,
+        0.84
+      ],
+      "use": "prop",
+      "sizeTiles": [
+        3,
+        2
+      ],
+      "ramp": "base",
+      "solid": false,
+      "collision": "none",
+      "tint": {
+        "slot": "flower",
+        "strength": 0.5,
+        "keepChroma": 0.8
+      }
+    },
+    {
+      "id": "column",
+      "source": "column",
+      "mode": "grabcut",
+      "rect": [
+        0.31,
+        0.23,
+        0.55,
+        0.99
+      ],
+      "use": "prop",
+      "sizeTiles": [
+        2,
+        4
+      ],
+      "ramp": "base",
+      "solid": true,
+      "collision": "base",
+      "tint": {
+        "slot": "rockFront",
+        "strength": 0.8,
+        "keepChroma": 0.3
+      }
+    },
+    {
+      "id": "bush-azalea",
+      "source": "bush-azalea",
+      "mode": "grabcut",
+      "rect": [
+        0.38,
+        0.19,
+        0.82,
+        0.75
+      ],
+      "use": "prop",
+      "sizeTiles": [
+        3,
+        3
+      ],
+      "ramp": "base",
+      "solid": true,
+      "collision": "alpha",
+      "tint": {
+        "slot": "flowerB",
+        "strength": 0.4,
+        "keepChroma": 0.7
+      }
+    },
+    {
+      "id": "rock-moss",
+      "source": "rock-moss",
+      "mode": "rect",
+      "rect": [
+        0.2,
+        0.27,
+        0.86,
+        0.8
+      ],
+      "use": "rockfill",
+      "sizeTiles": [
+        2,
+        2
+      ],
+      "ramp": "base",
+      "solid": false,
+      "collision": "none",
+      "tint": {
+        "slot": "rock",
+        "strength": 0.7,
+        "keepChroma": 0.35
+      }
+    },
+    {
+      "id": "rock-granite",
+      "source": "rock-granite",
+      "mode": "rect",
+      "rect": [
+        0.42,
+        0.22,
+        0.7,
+        0.85
+      ],
+      "use": "rockfill",
+      "sizeTiles": [
+        2,
+        2
+      ],
+      "ramp": "base",
+      "solid": false,
+      "collision": "none",
+      "tint": {
+        "slot": "rock",
+        "strength": 0.75,
+        "keepChroma": 0.3
+      }
+    },
+    {
+      "id": "rock-grain",
+      "source": "rock-grain",
+      "mode": "rect",
+      "rect": [
+        0.0,
+        0.0,
+        1.0,
+        0.42
+      ],
+      "use": "rockfill",
+      "sizeTiles": [
+        2,
+        2
+      ],
+      "ramp": "base",
+      "solid": false,
+      "collision": "none",
+      "tint": {
+        "slot": "rock",
+        "strength": 0.75,
+        "keepChroma": 0.3
+      }
+    }
+  ]
+}

@@ -3,5 +3,21 @@
   "name": "Bosque Hondo",
   "zone": "forestDeep",
   "map": "ow-0-1.txt",
-  "fireflies": 34
+  "fireflies": 34,
+  "props": [
+    {
+      "stamp": "boulder-moss",
+      "tile": [
+        13,
+        9
+      ]
+    },
+    {
+      "stamp": "stump-moss",
+      "tile": [
+        8,
+        8
+      ]
+    }
+  ]
 }

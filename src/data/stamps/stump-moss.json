@@ -1,0 +1,36 @@
+{
+  "id": "stump-moss",
+  "image": "stump-moss.png",
+  "use": "prop",
+  "sizeTiles": [
+    2,
+    3
+  ],
+  "cells": [
+    10,
+    9
+  ],
+  "samples": 4,
+  "ramp": "base",
+  "solid": true,
+  "footprint": [
+    "..",
+    "..",
+    "##"
+  ],
+  "tint": {
+    "slot": "moss",
+    "strength": 0.5,
+    "keepChroma": 0.5
+  },
+  "lum": [
+    0.1837,
+    0.719
+  ],
+  "credits": {
+    "title": "tree_stump_with_moss24",
+    "author": "Juhele_CZ",
+    "license": "CC0-1.0",
+    "sourceUrl": "https://www.flickr.com/photos/96541566@N06/51982348091"
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "id": "fern",
+  "image": "fern.png",
+  "use": "prop",
+  "sizeTiles": [
+    2,
+    3
+  ],
+  "cells": [
+    10,
+    9
+  ],
+  "samples": 4,
+  "ramp": "base",
+  "solid": false,
+  "footprint": [
+    "..",
+    "..",
+    ".."
+  ],
+  "tint": {
+    "slot": "canopy",
+    "strength": 0.6,
+    "keepChroma": 0.5
+  },
+  "lum": [
+    0.6009,
+    0.8594
+  ],
+  "credits": {
+    "title": "Cinnamon fern frond",
+    "author": "jeremyosborn",
+    "license": "PDM-1.0",
+    "sourceUrl": "https://www.flickr.com/photos/78334038@N00/52982888787"
+  }
+}

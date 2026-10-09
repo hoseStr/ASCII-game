@@ -3,5 +3,29 @@
   "name": "Orilla de los Espejos",
   "zone": "lake",
   "map": "ow-2-1.txt",
-  "fireflies": 12
+  "fireflies": 12,
+  "props": [
+    {
+      "stamp": "lily-white",
+      "tile": [
+        12,
+        6
+      ]
+    },
+    {
+      "stamp": "lily-white",
+      "tile": [
+        16,
+        9
+      ],
+      "flip": true
+    },
+    {
+      "stamp": "boulder-moss",
+      "tile": [
+        4,
+        9
+      ]
+    }
+  ]
 }

@@ -1,0 +1,35 @@
+{
+  "id": "rock-grain",
+  "image": "rock-grain.png",
+  "use": "rockfill",
+  "sizeTiles": [
+    2,
+    2
+  ],
+  "cells": [
+    10,
+    6
+  ],
+  "samples": 4,
+  "ramp": "base",
+  "solid": false,
+  "footprint": [
+    "..",
+    ".."
+  ],
+  "tint": {
+    "slot": "rock",
+    "strength": 0.75,
+    "keepChroma": 0.3
+  },
+  "lum": [
+    0.4616,
+    0.7962
+  ],
+  "credits": {
+    "title": "Chuckwalla in a Crevice",
+    "author": "Joshua Tree National Park",
+    "license": "PDM-1.0",
+    "sourceUrl": "https://www.flickr.com/photos/115357548@N08/51973775223"
+  }
+}

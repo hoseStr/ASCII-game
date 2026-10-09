@@ -18,6 +18,8 @@ import { Sky } from './systems/sky';
 import { Hud } from './ui/hud';
 import { CLOSED_EDGES, type EdgePolicy } from './world/collision';
 import { DIR_VEC, tileAt, type Dir, type RoomRenderData } from './world/room';
+import { PropLayer } from './render/propLayer';
+import type { StampImage } from './render/stamps';
 import { Structures } from './world/structures';
 import { HUD_ROWS, ROOM_H, ROOM_W, TILE, TILE_COLS, TILE_PROPS, TILE_ROWS, TILE_UNITS } from './world/tiles';
 import { Transition, type TransitionKind } from './world/transitions';
@@ -49,9 +51,12 @@ export class Game {
   private readonly wall = glyphIndex('▒');
   private readonly waterGlyph = glyphIndex('≈');
 
+  readonly propLayer = new PropLayer();
+
   constructor(
     readonly world: World,
     private renderer: Renderer,
+    private readonly stampImages: Map<string, StampImage>,
   ) {
     const start = world.data.start;
     this.enterRoom(start.room);
@@ -64,7 +69,8 @@ export class Game {
     this.room = room;
     this.renderData = this.world.renderData(room);
     this.palette = loadZonePalette(room.meta.zone);
-    this.renderer.setRoom(this.renderData, this.palette);
+    this.propLayer.build(room.props, room.rockFills, this.palette, this.stampImages);
+    this.renderer.setRoom(this.renderData, this.palette, this.propLayer);
     this.structures.build(room.map);
     this.fireflies.reset(this.renderData.field, room.meta.fireflies ?? 0, room.seed);
     this.edges.north = room.exits.north !== undefined;
@@ -78,7 +84,7 @@ export class Game {
   /** Tras perder y recuperar el contexto WebGL: nuevo renderer, misma sala. */
   attachRenderer(renderer: Renderer): void {
     this.renderer = renderer;
-    renderer.setRoom(this.renderData, this.palette);
+    renderer.setRoom(this.renderData, this.palette, this.propLayer);
   }
 
   /** Inicia una transición hacia la sala vecina en `dir`. */

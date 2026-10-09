@@ -3,5 +3,21 @@
   "name": "Puente de Niebla",
   "zone": "mist",
   "map": "ow-1-2.txt",
-  "fireflies": 10
+  "fireflies": 10,
+  "props": [
+    {
+      "stamp": "stump-moss",
+      "tile": [
+        17,
+        2
+      ]
+    },
+    {
+      "stamp": "mushroom-gold",
+      "tile": [
+        19,
+        9
+      ]
+    }
+  ]
 }

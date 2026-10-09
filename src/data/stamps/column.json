@@ -1,0 +1,37 @@
+{
+  "id": "column",
+  "image": "column.png",
+  "use": "prop",
+  "sizeTiles": [
+    2,
+    4
+  ],
+  "cells": [
+    10,
+    12
+  ],
+  "samples": 4,
+  "ramp": "base",
+  "solid": true,
+  "footprint": [
+    "..",
+    "..",
+    "..",
+    "##"
+  ],
+  "tint": {
+    "slot": "rockFront",
+    "strength": 0.8,
+    "keepChroma": 0.3
+  },
+  "lum": [
+    0.7732,
+    0.9438
+  ],
+  "credits": {
+    "title": "2022-11-14_16-02-15_JO_day2-4_Madaba_JH",
+    "author": "Juhele_CZ",
+    "license": "CC0-1.0",
+    "sourceUrl": "https://www.flickr.com/photos/96541566@N06/52593271127"
+  }
+}

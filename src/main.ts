@@ -10,6 +10,7 @@ import { CellBuffer } from './render/cellBuffer';
 import { Renderer, createFrameParams, type RenderSettings } from './render/renderer';
 import { loadGameFont } from './render/fontLoader';
 import { Game } from './game';
+import { loadStampImages } from './render/stamps';
 import { World } from './world/world';
 import { DebugOverlay } from './ui/debugOverlay';
 
@@ -76,6 +77,7 @@ async function boot(): Promise<void> {
   reducedMotionQuery.addEventListener('change', (e) => (settings.reducedEffects = e.matches));
 
   const world = new World();
+  const stampImages = await loadStampImages(world.stamps);
   const cells = new CellBuffer(GRID_COLS, GRID_ROWS);
   const frame = createFrameParams();
   const input = new Input();
@@ -83,7 +85,7 @@ async function boot(): Promise<void> {
   const overlay = new DebugOverlay(root);
 
   let renderer = new Renderer(canvas, font, GRID_COLS, GRID_ROWS);
-  const game = new Game(world, renderer);
+  const game = new Game(world, renderer, stampImages);
 
   // Tamaño exacto en píxeles de dispositivo (texto nítido).
   let pendingW = Math.round(canvas.clientWidth * devicePixelRatio);
@@ -123,7 +125,7 @@ async function boot(): Promise<void> {
 
   // Se evalúa solo cuando el overlay se redibuja (4 Hz), no en cada fotograma.
   const sceneInfo = (): string =>
-    `sala: ${game.room.meta.id} (${game.room.meta.name}) · luces ${frame.lightCount} · partículas ${game.particles.active} · princesa (${game.princess.x.toFixed(1)}, ${game.princess.y.toFixed(1)})`;
+    `sala: ${game.room.meta.id} (${game.room.meta.name}) · luces ${frame.lightCount} · partículas ${game.particles.active} · princesa (${game.princess.x.toFixed(1)}, ${game.princess.y.toFixed(1)}) · piezas ${game.room.props.length} (composición ${game.propLayer.lastBuildMs.toFixed(1)} ms)`;
 
   const loop = new GameLoop(
     {
@@ -170,6 +172,7 @@ async function boot(): Promise<void> {
       layout: renderer.layout,
       missing: renderer.atlas?.missing ?? [],
       compile: renderer.compileReport,
+      propBuildMs: game.propLayer.lastBuildMs,
       bootMs: bootMs,
     }),
     overlay,

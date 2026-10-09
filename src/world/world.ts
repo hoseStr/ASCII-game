@@ -4,6 +4,7 @@
  * tiles caminables del borde (deben coincidir a ambos lados: lo verifica un test).
  */
 import worldJson from '../data/world.json';
+import { applyProps, assignRockFills, loadStampDefs, resolveProps, type PlacedProp, type RockFill, type StampDef } from './props';
 import { DIR_VEC, DIRS, buildRenderData, edgeWalkable, parseRoomMap, type Dir, type RoomMeta, type RoomRenderData, type Tilemap } from './room';
 
 const mapFiles = import.meta.glob('../data/rooms/*.txt', { query: '?raw', import: 'default', eager: true }) as Record<
@@ -14,7 +15,12 @@ const metaFiles = import.meta.glob('../data/rooms/*.json', { import: 'default', 
 
 export interface Room {
   readonly meta: RoomMeta;
+  /** tilemap de colisión (incluye la huella sólida de las piezas) */
   readonly map: Tilemap;
+  /** piezas de escenario, ordenadas de atrás hacia delante */
+  readonly props: PlacedProp[];
+  /** texturas fotográficas de los grupos de rocas */
+  readonly rockFills: RockFill[];
   /** posición en la cuadrícula del overworld */
   readonly gx: number;
   readonly gy: number;
@@ -36,24 +42,28 @@ function hashString(s: string): number {
 export class World {
   readonly rooms = new Map<string, Room>();
   readonly data: WorldData;
+  readonly stamps: Map<string, StampDef>;
   private readonly renderCache = new Map<string, RoomRenderData>();
 
   constructor(data: WorldData = worldJson as unknown as WorldData) {
     this.data = data;
+    this.stamps = loadStampDefs();
     const metas = new Map<string, RoomMeta>();
     for (const meta of Object.values(metaFiles)) metas.set(meta.id, meta);
     const maps = new Map<string, string>();
     for (const [path, text] of Object.entries(mapFiles)) maps.set(path.split('/').pop()!, text);
 
     const grid = data.overworld;
-    const parsed = new Map<string, { meta: RoomMeta; map: Tilemap; gx: number; gy: number }>();
+    const parsed = new Map<string, { meta: RoomMeta; map: Tilemap; gx: number; gy: number; props: PlacedProp[] }>();
     grid.forEach((row, gy) =>
       row.forEach((id, gx) => {
         const meta = metas.get(id);
         if (!meta) throw new Error(`Sala '${id}' sin metadatos JSON`);
         const text = maps.get(meta.map);
         if (text === undefined) throw new Error(`Sala '${id}': no existe el mapa '${meta.map}'`);
-        parsed.set(id, { meta, map: parseRoomMap(text, id), gx, gy });
+        const base = parseRoomMap(text, id);
+        const props = resolveProps(id, meta.props, this.stamps, base);
+        parsed.set(id, { meta, map: applyProps(id, base, props), gx, gy, props });
       }),
     );
     for (const [id, r] of parsed) {
@@ -63,7 +73,8 @@ export class World {
         const nid = grid[r.gy + dy]?.[r.gx + dx];
         if (nid && edgeWalkable(r.map, dir)) exits[dir] = nid;
       }
-      this.rooms.set(id, { ...r, exits, seed: hashString(id) });
+      const seed = hashString(id);
+      this.rooms.set(id, { ...r, exits, seed, rockFills: assignRockFills(r.map, this.stamps, seed) });
     }
   }
 
