@@ -34,6 +34,14 @@ void main() {
     col = texelFetch(uScene, ivec2(local), 0).rgb;
   }
 
+  // Las piezas de escenario (alfa 0 en la escena) se muestran tal cual: la foto
+  // convertida a ASCII, sin bloom, viñeta, aberración ni grano.
+  vec4 sc = texelFetch(uScene, ivec2(local), 0);
+  if (sc.a < 0.25) {
+    oColor = vec4(sc.rgb, 1.0);
+    return;
+  }
+
   vec3 bloom = texture(uBloom, uv).rgb;
   col = mix(col, bloom * 0.9 + col * 0.25, uDream);
   col += bloom * uBloomStrength;

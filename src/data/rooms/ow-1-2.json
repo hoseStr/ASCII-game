@@ -9,13 +9,13 @@
       "stamp": "stump-moss",
       "tile": [
         17,
-        2
+        5
       ]
     },
     {
       "stamp": "mushroom-gold",
       "tile": [
-        19,
+        13,
         9
       ]
     }

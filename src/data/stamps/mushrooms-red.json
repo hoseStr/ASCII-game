@@ -3,29 +3,20 @@
   "image": "mushrooms-red.png",
   "use": "prop",
   "sizeTiles": [
-    3,
-    3
+    4,
+    4
   ],
   "cells": [
-    15,
-    9
+    20,
+    12
   ],
   "samples": 4,
-  "ramp": "base",
   "solid": true,
   "footprint": [
-    "...",
-    "...",
-    "##."
-  ],
-  "tint": {
-    "slot": "flowerB",
-    "strength": 0.35,
-    "keepChroma": 0.75
-  },
-  "lum": [
-    0.3299,
-    0.8032
+    "....",
+    "....",
+    "....",
+    ".##."
   ],
   "credits": {
     "title": "Fly agaric.",

@@ -11,20 +11,10 @@
     6
   ],
   "samples": 4,
-  "ramp": "base",
   "solid": false,
   "footprint": [
     "..",
     ".."
-  ],
-  "tint": {
-    "slot": "rock",
-    "strength": 0.75,
-    "keepChroma": 0.3
-  },
-  "lum": [
-    0.1184,
-    0.6084
   ],
   "credits": {
     "title": "Granite Boulder and Rock Varnish",

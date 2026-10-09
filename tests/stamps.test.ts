@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { REPO_RAMP_COMPLEX, convertColor } from '../src/render/ascii';
-import { tintLab } from '../src/render/propLayer';
+import { convertStamp, stampImageFromRgba } from '../src/render/stamps';
 import {
   PropError,
   applyProps,
@@ -82,11 +82,8 @@ const testDef = (over: Partial<StampDef> = {}): StampDef => ({
   sizeTiles: [3, 2],
   cells: [15, 6],
   samples: 4,
-  ramp: 'base',
   solid: true,
   footprint: ['...', '##.'],
-  tint: { slot: 'rock', strength: 0.5, keepChroma: 0.5 },
-  lum: [0.2, 0.8],
   credits: { title: '', author: '', license: 'CC0-1.0', sourceUrl: '' },
   ...over,
 });
@@ -150,30 +147,67 @@ describe('rocas con textura fotográfica', () => {
   });
 });
 
-describe('tinte de zona', () => {
-  it('sin fuerza conserva la luz de la foto', () => {
-    const out = new Float32Array(3);
-    tintLab(0.6, 0.1, -0.05, 0.2, 0.9, 0.7, 0.02, 0.03, 0, 1, out, 0);
-    expect(out[0]).toBeCloseTo(0.6, 6);
-    expect(out[1]).toBeCloseTo(0.1, 6);
-    expect(out[2]).toBeCloseTo(-0.05, 6);
+describe('conversión pura de las piezas (la misma que hace compose.frag)', () => {
+  it('cada celda toma el color real de la foto y el glifo de la rampa del repo según (R+G+B)/3', () => {
+    // 2×1 celdas de 4×4 muestras: izquierda blanca opaca, derecha transparente
+    const w = 8;
+    const h = 4;
+    const rgba = new Uint8Array(w * h * 4);
+    for (let y = 0; y < h; y++) for (let x = 0; x < 4; x++) rgba.set([255, 255, 255, 255], (y * w + x) * 4);
+    const cells = convertStamp(stampImageFromRgba(rgba, w, h), 4, 'light');
+    expect(cells[0]![0]!.char).toBe('$'); // luz máxima → glifo más denso (sentido light)
+    expect([cells[0]![0]!.r, cells[0]![0]!.g, cells[0]![0]!.b]).toEqual([1, 1, 1]);
+    expect(cells[0]![1]!.char).toBe(''); // fuera de la silueta
+    expect(convertStamp(stampImageFromRgba(rgba, w, h), 4, 'ink')[0]![0]!.char).toBe(' '); // literal del repo
   });
 
-  it('es monótono en la luminancia (la foto conserva su luz y su forma)', () => {
-    const out = new Float32Array(3);
-    let prev = -Infinity;
-    for (let L = 0; L <= 1.0001; L += 0.05) {
-      tintLab(L, 0.05, 0.05, 0.25, 0.85, 0.7, 0.03, -0.02, 0.8, 0.4, out, 0);
-      expect(out[0]).toBeGreaterThanOrEqual(prev - 1e-9);
-      prev = out[0]!;
+  it('celdas opacas: glifo = fórmula literal del repo (np.mean del bloque · N / 255) y color = promedio real', () => {
+    let checked = 0;
+    for (const def of defs.values()) {
+      const png = decodePng(readFileSync(file(`src/assets/stamps/${def.image}`)));
+      const S = def.samples;
+      const cells = convertStamp(stampImageFromRgba(png.rgba, png.width, png.height), S, 'ink');
+      cells.forEach((row, cy) =>
+        row.forEach((cell, cx) => {
+          let sum = 0;
+          let opaque = true;
+          const rgb = [0, 0, 0];
+          for (let y = 0; y < S; y++) {
+            for (let x = 0; x < S; x++) {
+              const i = ((cy * S + y) * png.width + cx * S + x) * 4;
+              if (png.rgba[i + 3] !== 255) opaque = false;
+              for (let c = 0; c < 3; c++) {
+                sum += png.rgba[i + c]!;
+                rgb[c]! += png.rgba[i + c]!;
+              }
+            }
+          }
+          if (!opaque) return;
+          // como el repo: CHAR_LIST[min(int(np.mean(bloque) * N / 255), N - 1)]
+          const mean = sum / (S * S * 3);
+          const n = REPO_RAMP_COMPLEX.length;
+          expect(cell.char, `${def.id} (${cx}, ${cy})`).toBe(REPO_RAMP_COMPLEX[Math.min(Math.trunc((mean * n) / 255), n - 1)]);
+          expect(Math.round(cell.r * 255)).toBe(Math.round(rgb[0]! / (S * S)));
+          checked++;
+        }),
+      );
     }
+    expect(checked).toBeGreaterThan(500);
   });
 
-  it('lleva el croma hacia el color de la paleta', () => {
-    const out = new Float32Array(3);
-    tintLab(0.5, 0.2, 0.2, 0, 1, 0.5, -0.1, 0.0, 1, 0.5, out, 0);
-    expect(out[1]).toBeCloseTo(-0.1, 6);
-    expect(out[2]).toBeCloseTo(0, 6);
+  it('las piezas reales conservan su color: la amanita es roja y el nenúfar blanco', () => {
+    const avg = (id: string): [number, number, number] => {
+      const def = defs.get(id)!;
+      const png = decodePng(readFileSync(file(`src/assets/stamps/${def.image}`)));
+      const cells = convertStamp(stampImageFromRgba(png.rgba, png.width, png.height), def.samples).flat().filter((c) => c.char);
+      const s = cells.reduce((acc, c) => [acc[0] + c.r, acc[1] + c.g, acc[2] + c.b], [0, 0, 0]);
+      return [s[0] / cells.length, s[1] / cells.length, s[2] / cells.length];
+    };
+    const [r, g, b] = avg('mushrooms-red');
+    expect(r).toBeGreaterThan(g * 1.3);
+    expect(r).toBeGreaterThan(b * 1.3);
+    const lily = avg('lily-white');
+    expect(Math.min(...lily)).toBeGreaterThan(0.55);
   });
 });
 

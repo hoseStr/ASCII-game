@@ -176,6 +176,8 @@ async function boot(): Promise<void> {
       bootMs: bootMs,
     }),
     overlay,
+    renderer: () => renderer,
+    stampImages,
   };
 
   loop.start();

@@ -11,20 +11,10 @@
     6
   ],
   "samples": 4,
-  "ramp": "base",
   "solid": false,
   "footprint": [
     "..",
     ".."
-  ],
-  "tint": {
-    "slot": "rock",
-    "strength": 0.7,
-    "keepChroma": 0.35
-  },
-  "lum": [
-    0.333,
-    0.8187
   ],
   "credits": {
     "title": "tree_stump_with_moss23",

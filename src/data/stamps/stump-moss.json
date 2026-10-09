@@ -3,29 +3,20 @@
   "image": "stump-moss.png",
   "use": "prop",
   "sizeTiles": [
-    2,
-    3
+    3,
+    4
   ],
   "cells": [
-    10,
-    9
+    15,
+    12
   ],
   "samples": 4,
-  "ramp": "base",
   "solid": true,
   "footprint": [
-    "..",
-    "..",
-    "##"
-  ],
-  "tint": {
-    "slot": "moss",
-    "strength": 0.5,
-    "keepChroma": 0.5
-  },
-  "lum": [
-    0.1837,
-    0.719
+    "...",
+    "...",
+    "...",
+    ".##"
   ],
   "credits": {
     "title": "tree_stump_with_moss24",

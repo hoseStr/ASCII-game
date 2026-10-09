@@ -41,23 +41,6 @@ def load_json(path):
         return json.load(f)
 
 
-def srgb_to_oklab(rgb):
-    """rgb: (..., 3) en 0..1 sRGB → OKLab."""
-    c = np.where(rgb <= 0.04045, rgb / 12.92, ((rgb + 0.055) / 1.055) ** 2.4)
-    r, g, b = c[..., 0], c[..., 1], c[..., 2]
-    l = np.cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b)
-    m = np.cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b)
-    s = np.cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b)
-    return np.stack(
-        [
-            0.2104542553 * l + 0.793617785 * m - 0.0040720468 * s,
-            1.9779984951 * l - 2.428592205 * m + 0.4505937099 * s,
-            0.0259040371 * l + 0.7827717662 * m - 0.808675766 * s,
-        ],
-        axis=-1,
-    )
-
-
 # --- separación del sujeto ---------------------------------------------------------
 def mask_grabcut(rgb, rect, fg_rects=(), bg_rects=()):
     """GrabCut con el rectángulo del sujeto; `fg_rects`/`bg_rects` marcan sujeto o fondo seguros."""
@@ -189,7 +172,7 @@ def repo_preview(png):
 # --- hoja de contacto ------------------------------------------------------------------------
 def contact_tile(source_rgb, rect, mask, canvas, font):
     """Fila de revisión: foto con su recorte, sujeto separado y vista ASCII en el estilo del juego."""
-    W, H = 1100, 300
+    W, H = 1100, 340
     tile = Image.new("RGB", (W, H), (16, 14, 30))
     d = ImageDraw.Draw(tile)
     src = Image.fromarray(source_rgb)
@@ -201,7 +184,8 @@ def contact_tile(source_rgb, rect, mask, canvas, font):
     if mask is not None:
         m = Image.fromarray((mask * 255).astype(np.uint8)).resize((src.width, src.height))
         tile.paste(Image.composite(src, Image.new("RGB", src.size, (40, 0, 60)), m), (315, 22))
-    # Vista ASCII: rampa del repo en sentido light, glifo coloreado y fondo pintado tenue (como el juego).
+    # Vista ASCII como en el juego: algoritmo del repo (rampa de 70 en sentido light),
+    # color real del bloque, sin tinte, luz ni fondo pintado.
     rgb, a = canvas[..., :3], canvas[..., 3]
     h, w = a.shape
     cw, ch = 12, 20
@@ -213,14 +197,13 @@ def contact_tile(source_rgb, rect, mask, canvas, font):
             sl = (slice(cy * SAMPLES, (cy + 1) * SAMPLES), slice(cx * SAMPLES, (cx + 1) * SAMPLES))
             al = a[sl].mean()
             col = (rgb[sl] * a[sl][..., None]).reshape(-1, 3).sum(0) / max(1e-4, a[sl].sum()) if al > 0 else paper
-            bg = paper * (1 - al) + (paper + col * 0.25) * al
             x, y = ox + cx * cw, oy + cy * ch
-            d.rectangle([x, y, x + cw - 1, y + ch - 1], fill=tuple(int(v * 255) for v in np.clip(bg, 0, 1)))
+            d.rectangle([x, y, x + cw - 1, y + ch - 1], fill=tuple(int(v * 255) for v in paper))
             if al < 0.5:
                 continue
             L = col.mean() * 255
             g = ramp[min(int(L * len(ramp) / 255), len(ramp) - 1)]
-            d.text((x, y + 1), g, fill=tuple(int(min(255, v * 255 * 1.4)) for v in col), font=font)
+            d.text((x, y + 1), g, fill=tuple(int(min(255, v * 255)) for v in col), font=font)
     return tile
 
 
@@ -298,9 +281,6 @@ def main():
             canvas = fit_stamp(rgb, soft, st["sizeTiles"])
         a = canvas[..., 3]
         fp, cov = footprint(a, st["sizeTiles"], st.get("collision", "none") if st.get("solid") else "none")
-        lab = srgb_to_oklab(canvas[..., :3])
-        sel = lab[..., 0][a > 0.5]
-        lo, hi = (float(np.percentile(sel, 5)), float(np.percentile(sel, 95))) if len(sel) else (0.0, 1.0)
         png = (np.round(np.clip(canvas, 0, 1) * 255)).astype(np.uint8)
         Image.fromarray(png, "RGBA").save(os.path.join(out_png, f"{st['id']}.png"), optimize=True)
         meta = {
@@ -310,11 +290,8 @@ def main():
             "sizeTiles": st["sizeTiles"],
             "cells": [st["sizeTiles"][0] * TILE_COLS, st["sizeTiles"][1] * TILE_ROWS],
             "samples": SAMPLES,
-            "ramp": st.get("ramp", "base"),
             "solid": bool(st.get("solid")),
             "footprint": fp,
-            "tint": st["tint"],
-            "lum": [round(lo, 4), round(hi, 4)],
             "credits": {k: src[k] for k in ("title", "author", "license", "sourceUrl")},
         }
         with open(os.path.join(out_data, f"{st['id']}.json"), "w", encoding="utf-8", newline="\n") as f:
@@ -323,15 +300,15 @@ def main():
         with open(os.path.join(out_data, f"{st['id']}.preview.txt"), "w", encoding="ascii", newline="\n") as f:
             f.write("\n".join(repo_preview(png)) + "\n")
         tiles.append((st["id"], contact_tile(rgb, st["rect"], mask, canvas, font)))
-        print(f"{st['id']:14s} {st['use']:8s} {meta['cells'][0]}×{meta['cells'][1]} celdas  huella {fp}  L [{lo:.2f}, {hi:.2f}]")
+        print(f"{st['id']:14s} {st['use']:8s} {meta['cells'][0]}×{meta['cells'][1]} celdas  huella {fp}")
     update_notices(manifest, {s["source"] for s in defs})
     if tiles:
         os.makedirs(os.path.join(ROOT, "shots"), exist_ok=True)
-        sheet = Image.new("RGB", (1100, 300 * len(tiles)), (10, 9, 20))
+        sheet = Image.new("RGB", (1100, 340 * len(tiles)), (10, 9, 20))
         d = ImageDraw.Draw(sheet)
         for i, (sid, t) in enumerate(tiles):
-            sheet.paste(t, (0, i * 300))
-            d.text((5, i * 300 + 3), sid, fill=(255, 255, 255))
+            sheet.paste(t, (0, i * 340))
+            d.text((5, i * 340 + 3), sid, fill=(255, 255, 255))
         sheet.save(os.path.join(ROOT, "shots", "stamps-contact.png"))
 
 

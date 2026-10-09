@@ -8,15 +8,15 @@
     {
       "stamp": "bush-azalea",
       "tile": [
-        22,
-        8
+        7,
+        7
       ]
     },
     {
       "stamp": "mushroom-gold",
       "tile": [
         15,
-        10
+        8
       ]
     }
   ]

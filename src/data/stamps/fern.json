@@ -4,28 +4,19 @@
   "use": "prop",
   "sizeTiles": [
     2,
-    3
+    4
   ],
   "cells": [
     10,
-    9
+    12
   ],
   "samples": 4,
-  "ramp": "base",
   "solid": false,
   "footprint": [
     "..",
     "..",
+    "..",
     ".."
-  ],
-  "tint": {
-    "slot": "canopy",
-    "strength": 0.6,
-    "keepChroma": 0.5
-  },
-  "lum": [
-    0.6009,
-    0.8594
   ],
   "credits": {
     "title": "Cinnamon fern frond",

@@ -3,28 +3,18 @@
   "image": "log-fallen.png",
   "use": "prop",
   "sizeTiles": [
-    4,
+    5,
     2
   ],
   "cells": [
-    20,
+    25,
     6
   ],
   "samples": 4,
-  "ramp": "base",
   "solid": true,
   "footprint": [
-    "....",
-    "####"
-  ],
-  "tint": {
-    "slot": "trunk",
-    "strength": 0.55,
-    "keepChroma": 0.45
-  },
-  "lum": [
-    0.2448,
-    0.7137
+    ".....",
+    "#####"
   ],
   "credits": {
     "title": "20241030-FS-SNF-SR-002",

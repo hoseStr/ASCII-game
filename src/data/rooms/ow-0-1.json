@@ -8,14 +8,14 @@
     {
       "stamp": "boulder-moss",
       "tile": [
-        13,
-        9
+        6,
+        7
       ]
     },
     {
       "stamp": "stump-moss",
       "tile": [
-        8,
+        14,
         8
       ]
     }

@@ -4,29 +4,20 @@
   "use": "prop",
   "sizeTiles": [
     2,
-    4
+    5
   ],
   "cells": [
     10,
-    12
+    15
   ],
   "samples": 4,
-  "ramp": "base",
   "solid": true,
   "footprint": [
     "..",
     "..",
     "..",
+    "..",
     "##"
-  ],
-  "tint": {
-    "slot": "rockFront",
-    "strength": 0.8,
-    "keepChroma": 0.3
-  },
-  "lum": [
-    0.7732,
-    0.9438
   ],
   "credits": {
     "title": "2022-11-14_16-02-15_JO_day2-4_Madaba_JH",

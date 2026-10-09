@@ -11,20 +11,10 @@
     6
   ],
   "samples": 4,
-  "ramp": "base",
   "solid": false,
   "footprint": [
     "..",
     ".."
-  ],
-  "tint": {
-    "slot": "rock",
-    "strength": 0.75,
-    "keepChroma": 0.3
-  },
-  "lum": [
-    0.4616,
-    0.7962
   ],
   "credits": {
     "title": "Chuckwalla in a Crevice",

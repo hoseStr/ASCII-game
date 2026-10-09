@@ -19,7 +19,9 @@ vec3 prefilter(vec4 s) {
   float soft = clamp(l - uThreshold + uKnee, 0.0, 2.0 * uKnee);
   soft = soft * soft / (4.0 * uKnee + 1e-4);
   float w = max(soft, l - uThreshold) / max(l, 1e-4);
-  return s.rgb * (max(w, 0.0) + s.a * uEmissiveBoost);
+  float allowed = step(0.25, s.a);            // 0 = pieza pura: sin bloom
+  float emissive = max(0.0, s.a - 0.5) * 2.0;
+  return s.rgb * (max(w, 0.0) + emissive * uEmissiveBoost) * allowed;
 }
 
 void main() {

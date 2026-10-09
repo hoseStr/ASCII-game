@@ -3,28 +3,19 @@
   "image": "mushroom-gold.png",
   "use": "prop",
   "sizeTiles": [
-    2,
-    2
+    3,
+    3
   ],
   "cells": [
-    10,
-    6
+    15,
+    9
   ],
   "samples": 4,
-  "ramp": "base",
   "solid": true,
   "footprint": [
-    "..",
-    "#."
-  ],
-  "tint": {
-    "slot": "flower",
-    "strength": 0.55,
-    "keepChroma": 0.7
-  },
-  "lum": [
-    0.4512,
-    0.8975
+    "...",
+    "...",
+    ".#."
   ],
   "credits": {
     "title": "Fly Agaric (Amanita Muscaria)",

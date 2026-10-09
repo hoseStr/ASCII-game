@@ -25,8 +25,7 @@ export const MAX_PARTICLES = 512;
 export const PARTICLE_STRIDE = 8;
 
 /** Tipos de superficie que el horneado del terreno deja para la pasada pictórica. */
-export const SURFACE_KINDS = ['ground', 'path', 'flower', 'rock', 'rockFront', 'canopy', 'trunk', 'water', 'shore', 'void', 'prop'] as const;
-// Las piezas de escenario usan K_PROP + id del material de su rampa (K_PROP..K_PROP+MAT_COUNT−1).
+export const SURFACE_KINDS = ['ground', 'path', 'flower', 'rock', 'rockFront', 'canopy', 'trunk', 'water', 'shore', 'void'] as const;
 
 /** Flags de la capa semántica (canal G de la textura RG16UI). */
 export const FLAG_OCCUPIED = 1;

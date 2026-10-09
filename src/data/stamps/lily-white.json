@@ -3,28 +3,19 @@
   "image": "lily-white.png",
   "use": "prop",
   "sizeTiles": [
-    3,
-    2
+    4,
+    3
   ],
   "cells": [
-    15,
-    6
+    20,
+    9
   ],
   "samples": 4,
-  "ramp": "base",
   "solid": false,
   "footprint": [
-    "...",
-    "..."
-  ],
-  "tint": {
-    "slot": "flower",
-    "strength": 0.5,
-    "keepChroma": 0.8
-  },
-  "lum": [
-    0.6906,
-    0.9645
+    "....",
+    "....",
+    "...."
   ],
   "credits": {
     "title": "2014-01-18_11-13-02_NZ_Auckland",

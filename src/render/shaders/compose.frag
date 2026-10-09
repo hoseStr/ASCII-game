@@ -48,6 +48,10 @@ uniform highp sampler2D uSnapState;
 uniform highp sampler2D uTerrainTex; // .x = SDF de la costa (negativo dentro de la isla)
 uniform highp sampler2D uExtraTex;   // .w = SDF de los obstáculos (negativo dentro)
 uniform int uEdges;                  // 1 = dibujar contornos
+// piezas de escenario: fotos convertidas TAL CUAL (ver render/propLayer.ts)
+uniform highp usampler2D uPropRgb;   // bytes reales de la foto (RGBA8UI), 4 muestras por celda
+uniform highp sampler2D uPropInfo;   // r: modo (1 pieza, 2 textura de roca)
+uniform highp sampler2D uSurfaceTex; // terreno horneado: .w = tipo de superficie
 uniform uint uEdgeGlyph[4];          // ─ │ / \
 
 layout(location = 0) out vec4 oFg;    // rgb, emisividad (bloom)
@@ -176,7 +180,6 @@ void main() {
 
   // --- promedio del bloque (igual que el repo) y material de mayor peso -----------
   vec3 sum = vec3(0.0);
-  float propCov = 0.0;
   float bestW = -1.0;
   int mat = 0;
   for (int y = 0; y < uS; y++) {
@@ -185,7 +188,6 @@ void main() {
       sum += texelFetch(uPict, q, 0).rgb;
       vec4 m = texelFetch(uMat, q, 0);
       if (m.g > bestW) { bestW = m.g; mat = int(m.r * 255.0 + 0.5); }
-      propCov += m.b;
     }
   }
   vec3 avg = sum / float(uS * uS);
@@ -222,15 +224,69 @@ void main() {
   // El despeje vacía de glifos el entorno de la entidad, pero conserva el fondo
   // pintado: alrededor de una luz no queda un hueco oscuro, sino su resplandor.
   vec3 fg = clamp(avgc * uInkGain, 0.0, 1.0) * (1.0 - 0.45 * uClearance * clear);
-  // Las piezas de escenario llevan un fondo pintado más denso: se leen como una masa
-  // de color (la silueta de la foto) con la textura de glifos encima.
-  propCov /= float(uS * uS);
-  vec3 bg = uPaper + avgc * (uBgFill * (1.0 + 0.6 * clear) + (uLegibility == 1 ? 0.0 : 0.3 * propCov));
+  vec3 bg = uPaper + avgc * uBgFill * (1.0 + 0.6 * clear);
   float lum = luminance(avg);
   float emissive = smoothstep(0.45, 1.1, lum);
 
-  // Contornos de tinta: obstáculos (fuerte) y costa de la isla (suave).
-  if (uEdges == 1) {
+  // --- piezas de escenario: la foto convertida a ASCII tal cual -------------------------
+  // Algoritmo del repo sobre los colores REALES de la foto (sin tinte, luz, niebla,
+  // respiración, contornos ni bloom): color = promedio de las muestras cubiertas,
+  // L = (R + G + B) / 3, índice = min(floor(L·N/255), N−1) en la rampa de 70.
+  // Aritmética entera (bytes de la foto): el resultado es idéntico al de la CPU.
+  uvec3 pSumCA = uvec3(0u); // suma de color · alfa
+  uint pSumA = 0u;          // suma de alfa
+  int pMode = 0;            // 1 si alguna muestra es de pieza; si no, 2 si es textura de roca
+  for (int y = 0; y < 4; y++) {
+    for (int x = 0; x < 4; x++) {
+      ivec2 q = src * 4 + ivec2(x, y);
+      int m = int(texelFetch(uPropInfo, q, 0).r * 255.0 + 0.5);
+      if (m == 1) {
+        uvec4 v = texelFetch(uPropRgb, q, 0);
+        pSumCA += v.rgb * v.a;
+        pSumA += v.a;
+        pMode = 1;
+      } else if (m == 2 && pMode == 0) {
+        pMode = 2;
+      }
+    }
+  }
+  if (pMode == 2) {
+    uvec4 v = texelFetch(uPropRgb, src * 4 + ivec2(2, 2), 0);
+    pSumCA = v.rgb * 255u;
+    pSumA = 255u;
+  }
+  bool pure = false;
+  if (pMode == 1) {
+    pure = pSumA * 2u >= 16u * 255u; // al menos media celda cubierta por la silueta
+  } else if (pMode == 2) {
+    int k = int(texelFetch(uSurfaceTex, src * uS + uS / 2, 0).w + 0.5);
+    pure = k == K_ROCK || k == K_ROCK_FRONT; // textura de roca: solo dentro de la roca
+  }
+  bool noBloom = false;
+  if (pure && uLegibility == 0) {
+    // color del bloque en 8 bits (como los píxeles del repo) e índice con enteros:
+    // idx = min(floor((R+G+B)/3 · N / 255), N−1) sin errores de redondeo de coma flotante
+    ivec3 c8 = ivec3((2u * pSumCA + pSumA) / (2u * pSumA)); // color: floor(suma(c·a)/suma(a) + 0,5)
+    vec3 pc = vec3(c8) / 255.0;
+    // índice con la media EXACTA de los píxeles (np.mean del repo), en enteros:
+    // floor(suma(c·a) · N / (3 · 255 · suma(a)))
+    uint pAll = pSumCA.r + pSumCA.g + pSumCA.b;
+    float pL = float(pAll) / (3.0 * float(pSumA));
+    int pn = uRampLen[MAT_BASE];
+    int pIdx = min(int(pAll * uint(pn) / (765u * pSumA)), pn - 1);
+    mat = MAT_BASE;
+    idx = pIdx;
+    Ls = pL;
+    glyph = rampGlyph(MAT_BASE, scrambleIdx(pIdx, MAT_BASE, cell, scramble));
+    fg = pc;
+    bg = uPaper;
+    emissive = 0.0;
+    noBloom = true;
+  }
+  bool pureProp = pure && pMode == 1;
+
+  // Contornos de tinta: obstáculos (fuerte) y costa de la isla (suave). Nunca sobre una pieza.
+  if (uEdges == 1 && !pureProp) {
     ivec2 inner;
     uint eg;
     if (contour(src, gridSize, 0, eg, inner)) {
@@ -262,7 +318,8 @@ void main() {
   }
 
   oFg = vec4(fg, emissive);
-  oBg = vec4(bg, 1.0);
+  // a = 0: celda excluida del bloom (piezas de escenario puras)
+  oBg = vec4(bg, noBloom && isSem < 0.5 ? 0.0 : 1.0);
   oGlyph = glyphOut(glyph, isSem);
   oState = vec4(Ls, float(idx), float(mat), 1.0);
 }

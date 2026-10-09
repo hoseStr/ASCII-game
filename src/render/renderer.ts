@@ -111,9 +111,8 @@ export interface RoomRender {
 
 /** Capa de piezas de la sala (ver render/propLayer.ts). */
 export interface PropLayerData {
-  lab: Float32Array;
+  rgb: Uint8Array;
   info: Uint8Array;
-  sdf: Float32Array;
 }
 
 export const PASS_LABELS = ['pictórica', 'conversión', 'glifos', 'bloom', 'final'] as const;
@@ -149,9 +148,8 @@ export class Renderer {
   private readonly fieldTex: WebGLTexture;
   private readonly tilesTex: WebGLTexture;
   private readonly noiseTex: WebGLTexture;
-  private readonly propLabTex: WebGLTexture;
+  private readonly propRgbTex: WebGLTexture;
   private readonly propInfoTex: WebGLTexture;
-  private readonly propSdfTex: WebGLTexture;
   private readonly semGlyphTex: WebGLTexture;
   private readonly semFgTex: WebGLTexture;
   private readonly semBgTex: WebGLTexture;
@@ -235,10 +233,10 @@ export class Renderer {
     const r8ui: TexFormat = { internalFormat: gl.R8UI, format: gl.RED_INTEGER, type: gl.UNSIGNED_BYTE, filter: gl.NEAREST };
     this.tilesTex = createTexture(gl, SCREEN_TILES_W, SCREEN_TILES_H, r8ui, new Uint8Array(SCREEN_TILES_W * SCREEN_TILES_H));
     this.noiseTex = createNoiseTexture(gl);
-    // Piezas de escenario: color OKLab premultiplicado (float, filtrable), info y SDF por celda.
-    this.propLabTex = createTexture(gl, PROP_W, PROP_H, { internalFormat: gl.RGBA16F, format: gl.RGBA, type: gl.FLOAT, filter: gl.LINEAR });
+    // Piezas de escenario: color real de la foto (sRGB premultiplicado, float) e info.
+    // RGBA8UI (bytes exactos): la conversión de las piezas coincide bit a bit con la de CPU.
+    this.propRgbTex = createTexture(gl, PROP_W, PROP_H, { internalFormat: gl.RGBA8UI, format: gl.RGBA_INTEGER, type: gl.UNSIGNED_BYTE, filter: gl.NEAREST });
     this.propInfoTex = createTexture(gl, PROP_W, PROP_H, this.fmt.rgba8);
-    this.propSdfTex = createTexture(gl, cols, rows, r16f, new Float32Array(cols * rows).fill(50));
     const rg16ui: TexFormat = { internalFormat: gl.RG16UI, format: gl.RG_INTEGER, type: gl.UNSIGNED_SHORT, filter: gl.NEAREST };
     this.semGlyphTex = createTexture(gl, cols, rows, rg16ui);
     this.semFgTex = createTexture(gl, cols, rows, this.fmt.rgba8);
@@ -254,12 +252,10 @@ export class Renderer {
   /** Cambia de sala: SDF de islas, tiles para el horneado y paleta de zona. */
   setRoom(room: RoomRender, palette: ZonePaletteGpu, props: PropLayerData): void {
     const gl = this.gl;
-    gl.bindTexture(gl.TEXTURE_2D, this.propLabTex);
-    gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, PROP_W, PROP_H, gl.RGBA, gl.FLOAT, props.lab);
+    gl.bindTexture(gl.TEXTURE_2D, this.propRgbTex);
+    gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, PROP_W, PROP_H, gl.RGBA_INTEGER, gl.UNSIGNED_BYTE, props.rgb);
     gl.bindTexture(gl.TEXTURE_2D, this.propInfoTex);
     gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, PROP_W, PROP_H, gl.RGBA, gl.UNSIGNED_BYTE, props.info);
-    gl.bindTexture(gl.TEXTURE_2D, this.propSdfTex);
-    gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, this.cols, this.rows, gl.RED, gl.FLOAT, props.sdf);
     gl.bindTexture(gl.TEXTURE_2D, this.fieldTex);
     gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, this.cols, this.rows, gl.RED, gl.FLOAT, room.field);
     gl.bindTexture(gl.TEXTURE_2D, this.tilesTex);
@@ -370,9 +366,6 @@ export class Renderer {
     bindTex(gl, p, 'uField', 0, this.fieldTex);
     bindTex(gl, p, 'uTiles', 1, this.tilesTex);
     bindTex(gl, p, 'uNoise', 2, this.noiseTex);
-    bindTex(gl, p, 'uPropLab', 3, this.propLabTex);
-    bindTex(gl, p, 'uPropInfo', 4, this.propInfoTex);
-    bindTex(gl, p, 'uPropSdf', 5, this.propSdfTex);
     gl.uniform3fv(p.u('uPal'), pal.surfaceOklab);
     gl.uniform1i(p.u('uOctaves'), octaves);
     gl.uniform1i(p.u('uCliffSteps'), 48);
@@ -484,6 +477,9 @@ export class Renderer {
     bindTex(gl, p, 'uTerrainTex', 11, terrain.textures[0]!);
     bindTex(gl, p, 'uExtraTex', 12, terrain.textures[2]!);
     gl.uniform1i(p.u('uEdges'), s.fidelity || !s.edges ? 0 : 1);
+    bindTex(gl, p, 'uPropRgb', 13, this.propRgbTex);
+    bindTex(gl, p, 'uPropInfo', 14, this.propInfoTex);
+    bindTex(gl, p, 'uSurfaceTex', 15, terrain.textures[1]!);
     gl.uniform1uiv(p.u('uEdgeGlyph'), EDGE_GLYPH_IDS);
     gl.uniform1iv(p.u('uRampLen'), this.rampLen);
     gl.uniform1i(p.u('uS'), q.samples);
@@ -553,6 +549,28 @@ export class Renderer {
 
     this.frameIndex++;
     this.resetState = false;
+  }
+
+  /**
+   * Depuración/verificación: lee de la GPU el estado de celda del último fotograma
+   * (índice de glifo y color de primer plano, 8 bits) para compararlo con la CPU.
+   */
+  debugReadCells(): { glyph: Uint16Array; fg: Uint8Array } {
+    const gl = this.gl;
+    const last = this.compose[(this.frameIndex + 1) & 1];
+    const n = this.cols * this.rows;
+    const fgRaw = new Uint8Array(n * 4);
+    const gRaw = new Uint8Array(n * 4);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, last.fbo);
+    gl.readBuffer(gl.COLOR_ATTACHMENT0);
+    gl.readPixels(0, 0, this.cols, this.rows, gl.RGBA, gl.UNSIGNED_BYTE, fgRaw);
+    gl.readBuffer(gl.COLOR_ATTACHMENT0 + 2);
+    gl.readPixels(0, 0, this.cols, this.rows, gl.RGBA, gl.UNSIGNED_BYTE, gRaw);
+    gl.readBuffer(gl.COLOR_ATTACHMENT0);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    const glyph = new Uint16Array(n);
+    for (let i = 0; i < n; i++) glyph[i] = gRaw[i * 4]! + 256 * gRaw[i * 4 + 1]!;
+    return { glyph, fg: fgRaw };
   }
 
   /** Partículas sobre la capa pictórica: color aditivo y luego material. */
@@ -638,7 +656,7 @@ export class Renderer {
       this.progFinal,
     ])
       prog.dispose();
-    for (const t of [this.fieldTex, this.tilesTex, this.noiseTex, this.propLabTex, this.propInfoTex, this.propSdfTex, this.semGlyphTex, this.semFgTex, this.semBgTex, this.atlasTex, this.rampsTex]) {
+    for (const t of [this.fieldTex, this.tilesTex, this.noiseTex, this.propRgbTex, this.propInfoTex, this.semGlyphTex, this.semFgTex, this.semBgTex, this.atlasTex, this.rampsTex]) {
       if (t) gl.deleteTexture(t);
     }
     for (const rt of [...this.compose, this.snapshot, this.pict, this.terrain, this.scene, ...this.bloomDown, ...this.bloomUp]) {

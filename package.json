@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "shots": "node tools/screenshot.mjs"
+    "shots": "node tools/screenshot.mjs",
+    "verify:stamps": "node tools/verify_stamps.mjs"
   },
   "devDependencies": {
     "@types/node": "22.20.4",

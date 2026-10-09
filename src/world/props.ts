@@ -4,7 +4,6 @@
  * desde el JSON de la sala, huella de colisión y agrupación de las rocas `#`
  * para pintarlas con texturas fotográficas.
  */
-import type { Material } from '../render/glyphs';
 import { tileAt, type Tilemap } from './room';
 import { TILE, TILE_PROPS } from './tiles';
 
@@ -18,13 +17,9 @@ export interface StampDef {
   sizeTiles: [number, number];
   cells: [number, number];
   samples: number;
-  ramp: Material;
   solid: boolean;
   /** huella por tile, de arriba abajo: '#' sólido, '.' libre */
   footprint: string[];
-  tint: { slot: string; strength: number; keepChroma: number };
-  /** percentiles 5 y 95 de la luminancia OKLab del sujeto */
-  lum: [number, number];
   credits: { title: string; author: string; license: string; sourceUrl: string };
 }
 

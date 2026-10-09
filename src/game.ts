@@ -69,7 +69,7 @@ export class Game {
     this.room = room;
     this.renderData = this.world.renderData(room);
     this.palette = loadZonePalette(room.meta.zone);
-    this.propLayer.build(room.props, room.rockFills, this.palette, this.stampImages);
+    this.propLayer.build(room.props, room.rockFills, this.stampImages);
     this.renderer.setRoom(this.renderData, this.palette, this.propLayer);
     this.structures.build(room.map);
     this.fireflies.reset(this.renderData.field, room.meta.fireflies ?? 0, room.seed);

@@ -101,8 +101,8 @@ Los sprites son texto: `src/data/sprites/princess.txt` y `princess.json`.
 El repositorio original convierte fotos y video en texto, y el juego hace lo mismo con su escenario.
 
 - **Qué son.** Rocas con musgo, amanitas, helechos, tocones, troncos, nenúfares, columnas antiguas y azaleas parten de **fotos reales en dominio público o CC0**.
-- **Cómo se pintan.** Entran en la capa pictórica y se convierten a ASCII en vivo con el algoritmo del repo. Por eso reciben el tinte de la paleta de su zona, la luz dinámica, la niebla y la respiración como el resto del mundo.
-- **Rocas `#`.** Cada grupo de rocas contiguas toma la textura de una foto de roca. Su forma, su colisión y su contorno siguen saliendo de los tiles.
+- **Cómo se pintan.** Se convierten a ASCII **tal cual**, exactamente como hacía el repo con sus imágenes. Cada celda toma el color real de la foto (el promedio de su bloque de píxeles) y el glifo sale de `min(floor(media·N/255), N−1)` en la rampa de 70 caracteres. No llevan tinte de zona, luz, niebla, respiración, contornos, bloom ni post-proceso: la pieza se ve como la foto.
+- **Rocas `#`.** Cada grupo de rocas contiguas toma la textura de una foto de roca, convertida igual. Su forma y su colisión siguen saliendo de los tiles.
 - **Excepción al brief.** El brief original decía "no uses imágenes externas"; esta mejora lo cambia a propósito.
   - Solo se aceptan fotos CC0 o de dominio público, con la licencia verificada en la página de origen.
   - Cada foto queda registrada en `art/manifest.json` y acreditada en THIRD_PARTY_NOTICES.
@@ -111,9 +111,9 @@ En el juego:
 
 - **Colocación.** Las piezas se colocan desde el JSON de la sala, en la clave `props`.
 - **Colisión.** Las piezas sólidas bloquean según su **huella**, que se calcula por tile a partir del alfa de la foto. Las que se ven altas (columna, setas, tocón) solo bloquean por la base.
-- **Legibilidad.** Para que se lean como objetos llevan un **fondo pintado** más denso, un **contorno por fuera** de la silueta que no se come la foto y un anillo de sombra.
-- **Piezas decorativas.** El helecho y los nenúfares no bloquean ni llevan contorno.
-- **Depuración.** La página `/debug/stamps.html` muestra cada estampa: la imagen procesada, la conversión literal del repo y el resultado en cada zona.
+- **Piezas decorativas.** El helecho y los nenúfares no bloquean.
+- **Fidelidad comprobada.** `npm run verify:stamps` lee de la GPU el glifo y el color de cada celda de cada pieza en las 9 salas y los compara con el algoritmo del repo calculado en CPU. Tienen que coincidir al byte, y coinciden. Todo el cálculo es entero (bytes de la foto), así que no hay diferencias de redondeo entre CPU y GPU.
+- **Depuración.** La página `/debug/stamps.html` muestra cada estampa: la imagen procesada, la pieza tal como se ve en el juego y la conversión literal del repo en texto.
 
 ### Cómo añadir una imagen al escenario
 
@@ -127,7 +127,6 @@ En el juego:
    - `rect`: el sujeto, en coordenadas de 0 a 1;
    - `mode`: `grabcut`, `key-dark` para fondo negro o `rect` para texturas;
    - `sizeTiles`, `solid`, `collision` (`alpha` o `base`);
-   - `tint`: `slot` de la paleta, `strength` y `keepChroma`;
    - opcionales: `fg` y `bg`, rectángulos de sujeto o fondo seguros que guían a GrabCut.
 4. **Procésala:**
    ```bash
@@ -141,9 +140,10 @@ En el juego:
    - la sección de créditos;
    - una hoja de revisión en `shots/stamps-contact.png`.
 5. **Colócala** en una sala: `"props": [{ "stamp": "<id>", "tile": [x, y], "flip": false }]`, con `tile` como esquina superior izquierda.
-6. **Valida** con `npm test`, que comprueba:
+6. **Valida** con `npm test` y `npm run verify:stamps`. Los tests comprueban:
    - licencias, tamaños y huellas;
    - que el port de TypeScript reproduce al 100 % la vista previa literal del repo;
+   - que cada celda opaca usa exactamente la fórmula del repo (media del bloque) y el color real;
    - que la huella cae sobre suelo;
    - que ninguna sala queda bloqueada.
 
@@ -174,7 +174,7 @@ En el juego:
 
 ### Reparto entre capas
 
-- **Piezas de escenario:** se componen en CPU una vez por sala, con el tinte de zona, en una capa de 4 muestras por celda. El horneado del terreno (P0) las lee como una superficie más, con su material.
+- **Piezas de escenario:** sus bytes reales se componen en CPU una vez por sala, en una capa de 4 muestras por celda (textura `RGBA8UI`). En la conversión (P2), esas celdas aplican el algoritmo del repo directamente sobre la foto y saltan la capa pictórica, los contornos y la histéresis. También quedan fuera del bloom, la viñeta, la aberración y el grano.
 
 - **Capa pictórica:** todo el terreno natural, incluidos los obstáculos (rocas, árboles, agua, vacío). Así recibe la luz dinámica, y la Linterna Lunar de la Fase 4 podrá revelar zonas oscuras.
 - **Capa semántica:** estructuras construidas (puentes), entidades y HUD.
@@ -225,7 +225,7 @@ Mediciones en una **Intel UHD Graphics integrada** (Alder Lake, D3D11) con Micro
 - **Fotogramas:** 60 fps estables en las 9 salas y durante las transiciones. La variación del total sigue a la frecuencia dinámica de la GPU integrada.
 - **1366×768:** unos 4,1 ms de GPU.
 - **Arranque:** unos 80–230 ms, incluida la decodificación de las 12 estampas. Los 10 programas compilan en unos 25 ms.
-- **Piezas de escenario:** la composición de la capa al entrar en una sala tarda 0,6–3 ms en caliente; ocurre solo al cambiar de sala. Con piezas, la GPU sigue en 5,4–6,8 ms por fotograma a 1080p.
+- **Piezas de escenario:** la composición de la capa al entrar en una sala tarda 0,6–3 ms en caliente; ocurre solo al cambiar de sala. Con piezas, la GPU sigue en 5,7–7,1 ms por fotograma a 1080p.
 - **CPU:** 0,05 ms de simulación y 0,3–0,6 ms de preparación del render por fotograma.
 - **Cero allocations en el bucle caliente:** el heap JS crece 0 bytes/s, medido por `npm run shots`.
 

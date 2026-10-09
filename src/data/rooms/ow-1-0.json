@@ -8,14 +8,14 @@
     {
       "stamp": "column",
       "tile": [
-        12,
+        6,
         6
       ]
     },
     {
       "stamp": "column",
       "tile": [
-        17,
+        24,
         6
       ],
       "flip": true

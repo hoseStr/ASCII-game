@@ -6,26 +6,26 @@
   "fireflies": 12,
   "props": [
     {
-      "stamp": "lily-white",
-      "tile": [
-        12,
-        6
-      ]
-    },
-    {
-      "stamp": "lily-white",
-      "tile": [
-        16,
-        9
-      ],
-      "flip": true
-    },
-    {
       "stamp": "boulder-moss",
       "tile": [
         4,
-        9
+        5
       ]
+    },
+    {
+      "stamp": "lily-white",
+      "tile": [
+        11,
+        4
+      ]
+    },
+    {
+      "stamp": "lily-white",
+      "tile": [
+        14,
+        8
+      ],
+      "flip": true
     }
   ]
 }
