@@ -4,15 +4,16 @@
   "use": "rockfill",
   "sizeTiles": [
     2,
-    2
+    3
   ],
   "cells": [
     10,
-    6
+    9
   ],
   "samples": 4,
   "solid": false,
   "footprint": [
+    "..",
     "..",
     ".."
   ],

@@ -102,7 +102,8 @@ El repositorio original convierte fotos y video en texto, y el juego hace lo mis
 
 - **Qué son.** Rocas con musgo, amanitas, helechos, tocones, troncos, nenúfares, columnas antiguas y azaleas parten de **fotos reales en dominio público o CC0**.
 - **Cómo se pintan.** Se convierten a ASCII **tal cual**, exactamente como hacía el repo con sus imágenes. Cada celda toma el color real de la foto (el promedio de su bloque de píxeles) y el glifo sale de `min(floor(media·N/255), N−1)` en la rampa de 70 caracteres. No llevan tinte de zona, luz, niebla, respiración, contornos, bloom ni post-proceso: la pieza se ve como la foto.
-- **Rocas `#`.** Cada grupo de rocas contiguas toma la textura de una foto de roca, convertida igual. Su forma y su colisión siguen saliendo de los tiles.
+- **Bordes.** El único borde de una pieza es el contorno de su imagen recortada. No se añaden líneas, marcos, sombras ni cajas de fondo: detrás de los glifos de la pieza se ve el mismo fondo que en el resto de la sala.
+- **Rocas `#`.** Se descomponen en rectángulos de hasta 3×2 tiles. Cada uno muestra una foto de roca **recortada** (roca con musgo, granito o peña), estirada a su rectángulo y convertida igual. La colisión sigue siendo por tile, pero en el render esos tiles ya no se pintan como roca procedural, sin el contorno ni el recorte por tile de las demás rocas.
 - **Excepción al brief.** El brief original decía "no uses imágenes externas"; esta mejora lo cambia a propósito.
   - Solo se aceptan fotos CC0 o de dominio público, con la licencia verificada en la página de origen.
   - Cada foto queda registrada en `art/manifest.json` y acreditada en THIRD_PARTY_NOTICES.
@@ -112,7 +113,7 @@ En el juego:
 - **Colocación.** Las piezas se colocan desde el JSON de la sala, en la clave `props`.
 - **Colisión.** Las piezas sólidas bloquean según su **huella**, que se calcula por tile a partir del alfa de la foto. Las que se ven altas (columna, setas, tocón) solo bloquean por la base.
 - **Piezas decorativas.** El helecho y los nenúfares no bloquean.
-- **Fidelidad comprobada.** `npm run verify:stamps` lee de la GPU el glifo y el color de cada celda de cada pieza en las 9 salas y los compara con el algoritmo del repo calculado en CPU. Tienen que coincidir al byte, y coinciden. Todo el cálculo es entero (bytes de la foto), así que no hay diferencias de redondeo entre CPU y GPU.
+- **Fidelidad comprobada.** `npm run verify:stamps` lee de la GPU el glifo y el color de todas las celdas cubiertas por piezas (fotos y rocas) en las 9 salas y los compara con el algoritmo del repo calculado en CPU. Tienen que coincidir al byte, y coinciden. Todo el cálculo es entero (bytes de la foto), así que no hay diferencias de redondeo entre CPU y GPU.
 - **Depuración.** La página `/debug/stamps.html` muestra cada estampa: la imagen procesada, la pieza tal como se ve en el juego y la conversión literal del repo en texto.
 
 ### Cómo añadir una imagen al escenario
@@ -125,7 +126,8 @@ En el juego:
 2. **Verifica la licencia** en la página de la foto. Guárdala en `art/sources/<id>.jpg` (1024 px como máximo) y añádela a `art/manifest.json` con su título, autor, URL y licencia (`CC0-1.0` o `PDM-1.0`).
 3. **Define la estampa** en `art/stamps.json`:
    - `rect`: el sujeto, en coordenadas de 0 a 1;
-   - `mode`: `grabcut`, `key-dark` para fondo negro o `rect` para texturas;
+   - `mode`: `grabcut` o `key-dark` para fondo negro;
+   - `use`: `prop` (pieza colocada a mano) o `rockfill` (variante de foto para las rocas `#`);
    - `sizeTiles`, `solid`, `collision` (`alpha` o `base`);
    - opcionales: `fg` y `bg`, rectángulos de sujeto o fondo seguros que guían a GrabCut.
 4. **Procésala:**

@@ -64,5 +64,4 @@ No requieren atribución; se acreditan igualmente.
 | `bush-azalea` | [pink-azalea-bush](https://www.flickr.com/photos/192670421@N04/51143296650) | alcox585 | Public Domain Mark 1.0 |
 | `rock-moss` | [tree_stump_with_moss23](https://www.flickr.com/photos/96541566@N06/51435082195) | Juhele_CZ | CC0 1.0 (dominio público) |
 | `rock-granite` | [Granite Boulder and Rock Varnish](https://www.flickr.com/photos/115357548@N08/51916592018) | Joshua Tree National Park | Public Domain Mark 1.0 |
-| `rock-grain` | [Chuckwalla in a Crevice](https://www.flickr.com/photos/115357548@N08/51973775223) | Joshua Tree National Park | Public Domain Mark 1.0 |
 <!-- imagenes:fin -->

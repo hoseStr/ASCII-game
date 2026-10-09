@@ -142,13 +142,60 @@ export function rockClusters(map: Tilemap): Array<{ tx0: number; ty0: number; tx
   return out;
 }
 
-/** Asigna a cada grupo de rocas una textura (variante elegida por hash, determinista). */
+/** Tamaño máximo (en tiles) de una roca fotográfica: más grande se deformaría. */
+export const ROCK_RECT_MAX_W = 3;
+export const ROCK_RECT_MAX_H = 2;
+
+/**
+ * Descompone las rocas `#` en rectángulos (como mucho 3×2 tiles) que las cubren
+ * exactamente, sin solaparse: barrido por filas, cada rectángulo crece primero en
+ * ancho y luego en alto mientras la fila entera siga siendo roca libre.
+ */
+export function rockRects(map: Tilemap): Array<{ tx0: number; ty0: number; tx1: number; ty1: number }> {
+  const used = new Uint8Array(map.w * map.h);
+  const free = (x: number, y: number): boolean =>
+    x >= 0 && y >= 0 && x < map.w && y < map.h && !used[y * map.w + x] && tileAt(map, x, y) === TILE.rock;
+  const out: Array<{ tx0: number; ty0: number; tx1: number; ty1: number }> = [];
+  for (let y = 0; y < map.h; y++) {
+    for (let x = 0; x < map.w; x++) {
+      if (!free(x, y)) continue;
+      let w = 1;
+      while (w < ROCK_RECT_MAX_W && free(x + w, y)) w++;
+      let h = 1;
+      while (h < ROCK_RECT_MAX_H) {
+        let rowOk = true;
+        for (let k = 0; k < w; k++) if (!free(x + k, y + h)) rowOk = false;
+        if (!rowOk) break;
+        h++;
+      }
+      for (let yy = y; yy < y + h; yy++) for (let xx = x; xx < x + w; xx++) used[yy * map.w + xx] = 1;
+      out.push({ tx0: x, ty0: y, tx1: x + w - 1, ty1: y + h - 1 });
+    }
+  }
+  return out;
+}
+
+/**
+ * Cada rectángulo de roca toma una foto de roca recortada: la variante cuya
+ * proporción se parece más a la del rectángulo (desempate determinista por hash).
+ * La foto se estira al rectángulo; su contorno es el de la propia imagen.
+ */
 export function assignRockFills(map: Tilemap, defs: Map<string, StampDef>, seed: number): RockFill[] {
   const fills = [...defs.values()].filter((d) => d.use === 'rockfill').sort((a, b) => a.id.localeCompare(b.id));
   if (fills.length === 0) return [];
-  return rockClusters(map).map((c, i) => {
-    let h = (seed ^ Math.imul(i + 1, 0x9e3779b1) ^ Math.imul(c.tx0 * 31 + c.ty0, 0x85ebca6b)) >>> 0;
+  return rockRects(map).map((r, i) => {
+    const aspect = (r.tx1 - r.tx0 + 1) / (r.ty1 - r.ty0 + 1);
+    let h = (seed ^ Math.imul(i + 1, 0x9e3779b1) ^ Math.imul(r.tx0 * 31 + r.ty0, 0x85ebca6b)) >>> 0;
     h = Math.imul(h ^ (h >>> 15), 0x2c1b3c6d) >>> 0;
-    return { def: fills[h % fills.length]!, ...c };
+    let best = fills[0]!;
+    let bestScore = Infinity;
+    fills.forEach((d, k) => {
+      const score = Math.abs(Math.log(d.sizeTiles[0] / d.sizeTiles[1] / aspect)) + ((h + k) % fills.length) * 1e-3;
+      if (score < bestScore) {
+        bestScore = score;
+        best = d;
+      }
+    });
+    return { def: best, ...r };
   });
 }

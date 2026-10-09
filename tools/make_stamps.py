@@ -3,8 +3,8 @@ Pipeline de estampas: fotos con licencia libre → piezas de escenario ASCII.
 
 Por cada estampa de art/stamps.json:
   1. comprueba que su fuente (art/manifest.json) tiene licencia permitida;
-  2. separa el sujeto del fondo (GrabCut de OpenCV, clave sobre fondo oscuro o
-     rectángulo completo para texturas);
+  2. separa el sujeto del fondo (GrabCut de OpenCV o clave sobre fondo oscuro):
+     el contorno del recorte es el único borde que tendrá la pieza en el juego;
   3. recorta, ajusta a su tamaño en tiles corrigiendo la proporción de la celda
      (3:5) y reescala a 4×4 muestras por celda (alfa premultiplicado);
   4. escribe src/assets/stamps/<id>.png (RGBA) y src/data/stamps/<id>.json
@@ -112,18 +112,6 @@ def fit_stamp(rgb, alpha, size_tiles):
     oy = out_h - nh  # anclado abajo
     canvas[oy : oy + nh, ox : ox + nw, :3] = np.clip(col, 0, 1)
     canvas[oy : oy + nh, ox : ox + nw, 3] = np.clip(a_r, 0, 1)
-    return canvas
-
-
-def fill_rect(rgb, size_tiles):
-    """Textura (relleno de roca): el recorte completo, estirado a la rejilla."""
-    import cv2
-
-    tw, th = size_tiles
-    out_w, out_h = tw * TILE_COLS * SAMPLES, th * TILE_ROWS * SAMPLES
-    col = cv2.resize(rgb.astype(np.float64) / 255.0, (out_w, out_h), interpolation=cv2.INTER_AREA)
-    canvas = np.ones((out_h, out_w, 4))
-    canvas[..., :3] = np.clip(col, 0, 1)
     return canvas
 
 
@@ -270,15 +258,12 @@ def main():
             box = np.zeros_like(mask)
             box[int(y0 * h) : int(y1 * h), int(x0 * w) : int(x1 * w)] = 1
             mask = mask * box
-        if mode == "rect":
-            h, w = rgb.shape[:2]
-            x0, y0, x1, y1 = st["rect"]
-            canvas = fill_rect(rgb[int(y0 * h) : int(y1 * h), int(x0 * w) : int(x1 * w)], st["sizeTiles"])
         else:
-            import cv2
+            raise SystemExit(f"{st['id']}: modo '{mode}' desconocido (grabcut o key-dark)")
+        import cv2
 
-            soft = cv2.GaussianBlur(mask.astype(np.float64), (3, 3), 0)  # borde suavizado
-            canvas = fit_stamp(rgb, soft, st["sizeTiles"])
+        soft = cv2.GaussianBlur(mask.astype(np.float64), (3, 3), 0)  # borde suavizado
+        canvas = fit_stamp(rgb, soft, st["sizeTiles"])
         a = canvas[..., 3]
         fp, cov = footprint(a, st["sizeTiles"], st.get("collision", "none") if st.get("solid") else "none")
         png = (np.round(np.clip(canvas, 0, 1) * 255)).astype(np.uint8)

@@ -50,8 +50,6 @@ uniform highp sampler2D uExtraTex;   // .w = SDF de los obstáculos (negativo de
 uniform int uEdges;                  // 1 = dibujar contornos
 // piezas de escenario: fotos convertidas TAL CUAL (ver render/propLayer.ts)
 uniform highp usampler2D uPropRgb;   // bytes reales de la foto (RGBA8UI), 4 muestras por celda
-uniform highp sampler2D uPropInfo;   // r: modo (1 pieza, 2 textura de roca)
-uniform highp sampler2D uSurfaceTex; // terreno horneado: .w = tipo de superficie
 uniform uint uEdgeGlyph[4];          // ─ │ / \
 
 layout(location = 0) out vec4 oFg;    // rgb, emisividad (bloom)
@@ -235,33 +233,15 @@ void main() {
   // Aritmética entera (bytes de la foto): el resultado es idéntico al de la CPU.
   uvec3 pSumCA = uvec3(0u); // suma de color · alfa
   uint pSumA = 0u;          // suma de alfa
-  int pMode = 0;            // 1 si alguna muestra es de pieza; si no, 2 si es textura de roca
   for (int y = 0; y < 4; y++) {
     for (int x = 0; x < 4; x++) {
-      ivec2 q = src * 4 + ivec2(x, y);
-      int m = int(texelFetch(uPropInfo, q, 0).r * 255.0 + 0.5);
-      if (m == 1) {
-        uvec4 v = texelFetch(uPropRgb, q, 0);
-        pSumCA += v.rgb * v.a;
-        pSumA += v.a;
-        pMode = 1;
-      } else if (m == 2 && pMode == 0) {
-        pMode = 2;
-      }
+      uvec4 v = texelFetch(uPropRgb, src * 4 + ivec2(x, y), 0);
+      pSumCA += v.rgb * v.a;
+      pSumA += v.a;
     }
   }
-  if (pMode == 2) {
-    uvec4 v = texelFetch(uPropRgb, src * 4 + ivec2(2, 2), 0);
-    pSumCA = v.rgb * 255u;
-    pSumA = 255u;
-  }
-  bool pure = false;
-  if (pMode == 1) {
-    pure = pSumA * 2u >= 16u * 255u; // al menos media celda cubierta por la silueta
-  } else if (pMode == 2) {
-    int k = int(texelFetch(uSurfaceTex, src * uS + uS / 2, 0).w + 0.5);
-    pure = k == K_ROCK || k == K_ROCK_FRONT; // textura de roca: solo dentro de la roca
-  }
+  // la celda es parte de la pieza si la silueta de la foto cubre al menos la mitad
+  bool pure = pSumA * 2u >= 16u * 255u;
   bool noBloom = false;
   if (pure && uLegibility == 0) {
     // color del bloque en 8 bits (como los píxeles del repo) e índice con enteros:
@@ -279,11 +259,11 @@ void main() {
     Ls = pL;
     glyph = rampGlyph(MAT_BASE, scrambleIdx(pIdx, MAT_BASE, cell, scramble));
     fg = pc;
-    bg = uPaper;
+    // el fondo de la celda es el del entorno: la pieza no lleva caja ni marco
     emissive = 0.0;
     noBloom = true;
   }
-  bool pureProp = pure && pMode == 1;
+  bool pureProp = pure;
 
   // Contornos de tinta: obstáculos (fuerte) y costa de la isla (suave). Nunca sobre una pieza.
   if (uEdges == 1 && !pureProp) {

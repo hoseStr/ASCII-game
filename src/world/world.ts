@@ -4,8 +4,9 @@
  * tiles caminables del borde (deben coincidir a ambos lados: lo verifica un test).
  */
 import worldJson from '../data/world.json';
+import { TILE } from './tiles';
 import { applyProps, assignRockFills, loadStampDefs, resolveProps, type PlacedProp, type RockFill, type StampDef } from './props';
-import { DIR_VEC, DIRS, buildRenderData, edgeWalkable, parseRoomMap, type Dir, type RoomMeta, type RoomRenderData, type Tilemap } from './room';
+import { DIR_VEC, DIRS, HUD_TILE_ROWS, SCREEN_TILES_W, buildRenderData, edgeWalkable, parseRoomMap, type Dir, type RoomMeta, type RoomRenderData, type Tilemap } from './room';
 
 const mapFiles = import.meta.glob('../data/rooms/*.txt', { query: '?raw', import: 'default', eager: true }) as Record<
   string,
@@ -89,6 +90,13 @@ export class World {
     let d = this.renderCache.get(room.meta.id);
     if (!d) {
       d = buildRenderData(room.map, room.seed);
+      // Las rocas con foto no se pintan como roca procedural (sin contorno, sombra
+      // ni recorte por tile): solo se ve la foto, con el contorno de la imagen.
+      for (const r of room.rockFills) {
+        for (let ty = r.ty0; ty <= r.ty1; ty++) {
+          for (let tx = r.tx0; tx <= r.tx1; tx++) d.tileTex[(ty + HUD_TILE_ROWS) * SCREEN_TILES_W + tx] = TILE.prop;
+        }
+      }
       this.renderCache.set(room.meta.id, d);
     }
     return d;

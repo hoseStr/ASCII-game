@@ -97,7 +97,7 @@ async function main(): Promise<void> {
     a.target = '_blank';
     a.rel = 'noopener';
     meta.append(
-      `${def.use === 'prop' ? 'pieza' : 'textura de roca'} · ${def.sizeTiles[0]}×${def.sizeTiles[1]} tiles (${def.cells[0]}×${def.cells[1]} celdas) · ${def.solid ? `sólida, huella ${def.footprint.join('/')}` : 'decorativa'} · foto: `,
+      `${def.use === 'prop' ? 'pieza' : 'foto de roca (rocas #)'} · ${def.sizeTiles[0]}×${def.sizeTiles[1]} tiles (${def.cells[0]}×${def.cells[1]} celdas) · ${def.solid ? `sólida, huella ${def.footprint.join('/')}` : 'decorativa'} · foto: `,
       a,
       ` de ${def.credits.author} · ${def.credits.license}`,
     );

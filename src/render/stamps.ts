@@ -52,52 +52,113 @@ export interface StampCell {
   b: number;
 }
 
+/** Resultado de convertir un bloque de S×S muestras (ver convertBlock). */
+export interface BlockResult {
+  /** Σ alfa (bytes); la celda es parte de la pieza si ≥ S·S·255/2 */
+  sumA: number;
+  r8: number;
+  g8: number;
+  b8: number;
+  /** índice en la rampa del repo (sentido ink: 0 = más tinta) */
+  idx: number;
+}
+
 /**
- * Conversión pura de una estampa a celdas, idéntica (bit a bit) a la que hace el
- * shader de composición (compose.frag) con las piezas. Por celda de S×S muestras:
- *  - cobertura: la celda es parte de la pieza si Σalfa ≥ la mitad (en bytes);
- *  - color: promedio de las muestras ponderado por su alfa, redondeado a 8 bits
- *    (el color real de la foto, como los píxeles del repo);
- *  - glifo: L = media de (R+G+B)/3 de los píxeles (np.mean del repo, ponderada
- *    por alfa en los bordes) e índice = min(floor(L·N/255), N−1) en la rampa de
- *    70 del repo. Todo con enteros: sin diferencias de redondeo entre CPU y GPU.
+ * Conversión de un bloque de S×S muestras RGBA8, idéntica (bit a bit) a la que
+ * hace el shader de composición (compose.frag) con las piezas:
+ *  - color: promedio de las muestras ponderado por su alfa, redondeado a 8 bits;
+ *  - índice: L = media de (R+G+B)/3 de los píxeles (np.mean del repo, ponderada
+ *    por alfa en los bordes); idx = min(floor(L·N/255), N−1). Todo con enteros.
+ */
+export function convertBlock(data: Uint8Array, stride: number, x0: number, y0: number, samples: number, n: number, out: BlockResult): BlockResult {
+  let sr = 0;
+  let sg = 0;
+  let sb = 0;
+  let sa = 0;
+  for (let y = 0; y < samples; y++) {
+    for (let x = 0; x < samples; x++) {
+      const i = ((y0 + y) * stride + x0 + x) * 4;
+      const a = data[i + 3]!;
+      sr += data[i]! * a;
+      sg += data[i + 1]! * a;
+      sb += data[i + 2]! * a;
+      sa += a;
+    }
+  }
+  out.sumA = sa;
+  if (sa === 0) {
+    out.r8 = out.g8 = out.b8 = out.idx = 0;
+    return out;
+  }
+  out.r8 = Math.floor((2 * sr + sa) / (2 * sa));
+  out.g8 = Math.floor((2 * sg + sa) / (2 * sa));
+  out.b8 = Math.floor((2 * sb + sa) / (2 * sa));
+  out.idx = Math.min(Math.floor(((sr + sg + sb) * n) / (765 * sa)), n - 1);
+  return out;
+}
+
+/**
+ * Conversión pura de una estampa a celdas (la misma que se ve en el juego): cada
+ * celda con al menos media cobertura toma el color real de la foto y el glifo de
+ * la rampa de 70 del repo; el resto queda fuera de la silueta (char '').
  */
 export function convertStamp(img: StampImage, samples: number, direction: RampDirection = 'light'): StampCell[][] {
   const ramp = Array.from(REPO_RAMP_COMPLEX); // de más tinta a vacío (sentido ink)
   const n = ramp.length;
-  const cols = img.w / samples;
-  const rows = img.h / samples;
   const half = (samples * samples * 255) / 2;
+  const res: BlockResult = { sumA: 0, r8: 0, g8: 0, b8: 0, idx: 0 };
   const out: StampCell[][] = [];
-  for (let cy = 0; cy < rows; cy++) {
+  for (let cy = 0; cy < img.h / samples; cy++) {
     const row: StampCell[] = [];
-    for (let cx = 0; cx < cols; cx++) {
+    for (let cx = 0; cx < img.w / samples; cx++) {
+      convertBlock(img.data, img.w, cx * samples, cy * samples, samples, n, res);
+      if (res.sumA < half) {
+        row.push({ char: '', r: 0, g: 0, b: 0 });
+        continue;
+      }
+      row.push({ char: ramp[direction === 'ink' ? res.idx : n - 1 - res.idx]!, r: res.r8 / 255, g: res.g8 / 255, b: res.b8 / 255 });
+    }
+    out.push(row);
+  }
+  return out;
+}
+
+/**
+ * Remuestrea una estampa a w×h muestras (promedio por área, ponderado por alfa,
+ * con enteros): se usa para estirar una foto de roca a su rectángulo de tiles.
+ */
+export function resampleStamp(img: StampImage, w: number, h: number): StampImage {
+  const data = new Uint8Array(w * h * 4);
+  for (let y = 0; y < h; y++) {
+    const sy0 = Math.floor((y * img.h) / h);
+    const sy1 = Math.max(sy0 + 1, Math.floor(((y + 1) * img.h) / h));
+    for (let x = 0; x < w; x++) {
+      const sx0 = Math.floor((x * img.w) / w);
+      const sx1 = Math.max(sx0 + 1, Math.floor(((x + 1) * img.w) / w));
       let sr = 0;
       let sg = 0;
       let sb = 0;
       let sa = 0;
-      for (let y = 0; y < samples; y++) {
-        for (let x = 0; x < samples; x++) {
-          const i = ((cy * samples + y) * img.w + cx * samples + x) * 4;
+      let count = 0;
+      for (let yy = sy0; yy < sy1; yy++) {
+        for (let xx = sx0; xx < sx1; xx++) {
+          const i = (yy * img.w + xx) * 4;
           const a = img.data[i + 3]!;
           sr += img.data[i]! * a;
           sg += img.data[i + 1]! * a;
           sb += img.data[i + 2]! * a;
           sa += a;
+          count++;
         }
       }
-      if (sa < half) {
-        row.push({ char: '', r: 0, g: 0, b: 0 });
-        continue;
+      const o = (y * w + x) * 4;
+      data[o + 3] = Math.floor((2 * sa + count) / (2 * count));
+      if (sa > 0) {
+        data[o] = Math.floor((2 * sr + sa) / (2 * sa));
+        data[o + 1] = Math.floor((2 * sg + sa) / (2 * sa));
+        data[o + 2] = Math.floor((2 * sb + sa) / (2 * sa));
       }
-      // floor(Σc·a / Σa + 0,5) con enteros
-      const r8 = Math.floor((2 * sr + sa) / (2 * sa));
-      const g8 = Math.floor((2 * sg + sa) / (2 * sa));
-      const b8 = Math.floor((2 * sb + sa) / (2 * sa));
-      const idx = Math.min(Math.floor(((sr + sg + sb) * n) / (765 * sa)), n - 1);
-      row.push({ char: ramp[direction === 'ink' ? idx : n - 1 - idx]!, r: r8 / 255, g: g8 / 255, b: b8 / 255 });
     }
-    out.push(row);
   }
-  return out;
+  return { w, h, data };
 }

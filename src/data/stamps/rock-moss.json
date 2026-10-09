@@ -3,18 +3,18 @@
   "image": "rock-moss.png",
   "use": "rockfill",
   "sizeTiles": [
-    2,
+    3,
     2
   ],
   "cells": [
-    10,
+    15,
     6
   ],
   "samples": 4,
   "solid": false,
   "footprint": [
-    "..",
-    ".."
+    "...",
+    "..."
   ],
   "credits": {
     "title": "tree_stump_with_moss23",

@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { REPO_RAMP_COMPLEX, convertColor } from '../src/render/ascii';
-import { convertStamp, stampImageFromRgba } from '../src/render/stamps';
+import { convertStamp, resampleStamp, stampImageFromRgba } from '../src/render/stamps';
 import {
   PropError,
   applyProps,
@@ -9,10 +9,13 @@ import {
   footprintSolid,
   loadStampDefs,
   resolveProps,
+  ROCK_RECT_MAX_H,
+  ROCK_RECT_MAX_W,
   rockClusters,
+  rockRects,
   type StampDef,
 } from '../src/world/props';
-import { parseRoomMap, tileAt } from '../src/world/room';
+import { HUD_TILE_ROWS, SCREEN_TILES_W, parseRoomMap, tileAt } from '../src/world/room';
 import { TILE } from '../src/world/tiles';
 import { World } from '../src/world/world';
 import { decodePng } from './helpers/png';
@@ -208,6 +211,49 @@ describe('conversión pura de las piezas (la misma que hace compose.frag)', () =
     expect(r).toBeGreaterThan(b * 1.3);
     const lily = avg('lily-white');
     expect(Math.min(...lily)).toBeGreaterThan(0.55);
+  });
+});
+
+describe('rocas: fotos recortadas por rectángulo, sin bordes añadidos', () => {
+  it('los rectángulos cubren cada roca exactamente una vez y no superan 3×2 tiles', () => {
+    const world = new World();
+    for (const [id, room] of world.rooms) {
+      const covered = new Uint8Array(room.map.w * room.map.h);
+      for (const r of rockRects(room.map)) {
+        expect(r.tx1 - r.tx0 + 1).toBeLessThanOrEqual(ROCK_RECT_MAX_W);
+        expect(r.ty1 - r.ty0 + 1).toBeLessThanOrEqual(ROCK_RECT_MAX_H);
+        for (let y = r.ty0; y <= r.ty1; y++) {
+          for (let x = r.tx0; x <= r.tx1; x++) {
+            expect(tileAt(room.map, x, y), `${id} (${x}, ${y})`).toBe(TILE.rock);
+            covered[y * room.map.w + x]!++;
+          }
+        }
+      }
+      for (let i = 0; i < covered.length; i++) {
+        if (room.map.tiles[i] === TILE.rock) expect(covered[i], `${id} tile ${i}`).toBe(1);
+      }
+    }
+  });
+
+  it('en el render, las rocas con foto no se pintan como roca procedural (sin contorno ni recorte)', () => {
+    const world = new World();
+    const room = world.get('ow-1-0');
+    expect(room.rockFills.length).toBeGreaterThan(0);
+    const data = world.renderData(room);
+    for (const r of room.rockFills) {
+      expect(data.tileTex[(r.ty0 + HUD_TILE_ROWS) * SCREEN_TILES_W + r.tx0]).toBe(TILE.prop);
+      expect(tileAt(room.map, r.tx0, r.ty0)).toBe(TILE.rock); // la colisión no cambia
+    }
+  });
+
+  it('el remuestreo conserva el color de una imagen uniforme y el alfa de su silueta', () => {
+    const w = 8;
+    const h = 4;
+    const rgba = new Uint8Array(w * h * 4);
+    for (let i = 0; i < w * h; i++) rgba.set(i % w < 4 ? [200, 100, 50, 255] : [0, 0, 0, 0], i * 4);
+    const out = resampleStamp(stampImageFromRgba(rgba, w, h), 4, 2);
+    expect(Array.from(out.data.subarray(0, 4))).toEqual([200, 100, 50, 255]);
+    expect(out.data[(1 * 4 + 3) * 4 + 3]).toBe(0);
   });
 });
 
