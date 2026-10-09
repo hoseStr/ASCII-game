@@ -1,0 +1,62 @@
+:root {
+  --paper: #14112a;
+  --ink: #d9d2ee;
+  --dim: #8a83a8;
+  color-scheme: dark;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  background: #0c0a1c;
+  overflow: hidden;
+}
+
+#app {
+  position: fixed;
+  inset: 0;
+}
+
+canvas.screen {
+  display: block;
+  width: 100%;
+  height: 100%;
+  image-rendering: pixelated;
+}
+
+.debug-overlay {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  margin: 0;
+  padding: 8px 10px;
+  max-width: calc(100% - 16px);
+  box-sizing: border-box;
+  overflow-x: auto;
+  font: 12px/1.45 ui-monospace, 'Cascadia Mono', Consolas, monospace;
+  color: var(--ink);
+  background: rgb(12 10 28 / 0.78);
+  border: 1px solid rgb(140 130 190 / 0.35);
+  border-radius: 6px;
+  pointer-events: none;
+  white-space: pre;
+}
+
+.fatal {
+  max-width: 34rem;
+  margin: 18vh auto 0;
+  padding: 0 16px;
+  font: 16px/1.6 system-ui, sans-serif;
+  color: var(--ink);
+}
+
+.fatal h1 {
+  font-weight: 500;
+  font-size: 1.4rem;
+  color: #f0e6ff;
+}
+
+.fatal p {
+  color: var(--dim);
+}

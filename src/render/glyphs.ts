@@ -1,0 +1,98 @@
+/**
+ * Registro central de glifos: rampas por material, glifos reservados para
+ * entidades, texto de interfaz y glifos procedurales. Todo glifo que el juego
+ * dibuje debe salir de aquí (el atlas se construye con esta lista y un test
+ * verifica que cada uno existe en la fuente con el avance monoespaciado).
+ */
+import { REPO_RAMP_COMPLEX } from './ascii';
+
+/** Materiales de la capa pictórica. El id es el índice (se codifica en el shader). */
+export const MATERIALS = ['base', 'light', 'mist', 'water', 'veg', 'crystal'] as const;
+export type Material = (typeof MATERIALS)[number];
+export const MATERIAL_ID: Record<Material, number> = {
+  base: 0,
+  light: 1,
+  mist: 2,
+  water: 3,
+  veg: 4,
+  crystal: 5,
+};
+
+export interface RampDef {
+  /** Glifos de oscuro a brillante (sentido `light`), con el espacio primero. */
+  glyphs: string;
+  /**
+   * `authored`: se respeta el orden escrito (la rampa del repo y la de luz).
+   * `measured`: se reordena por tinta medida al construir el atlas (port de sort_chars).
+   */
+  order: 'authored' | 'measured';
+}
+
+const reverse = (s: string): string => Array.from(s).reverse().join('');
+
+export const RAMPS: Record<Material, RampDef> = {
+  // La rampa del repo, invertida para quedar de vacío a tinta, sin reordenar:
+  // su "sopa de letras" no monótona es parte de la firma visual de los videos.
+  base: { glyphs: reverse(REPO_RAMP_COMPLEX), order: 'authored' },
+  light: { glyphs: ' ·˙∘○◌✧✦', order: 'authored' },
+  mist: { glyphs: ' .·∴░▒▓', order: 'measured' },
+  water: { glyphs: ' .,~∽≈', order: 'measured' },
+  veg: { glyphs: ` .,';↟τʎγ♠♣ψΨ`, order: 'measured' },
+  crystal: { glyphs: ' ·◦△◊◇♦◈◆▲', order: 'measured' },
+};
+
+/**
+ * Glifos reservados para entidades interactivas (princesa, enemigos, objetos,
+ * proyectiles). El decorado nunca puede usarlos: lo verifica tests/legibility.test.ts.
+ */
+export const RESERVED_ENTITY_GLYPHS = '✶';
+
+/** Texto de interfaz (HUD, menús, depuración): ASCII imprimible + acentos del español. */
+export const UI_GLYPHS =
+  Array.from({ length: 95 }, (_, i) => String.fromCharCode(32 + i)).join('') + 'áéíóúñÁÉÍÓÚÑüÜ¿¡·…—♥♡←↑→↓';
+
+/**
+ * Glifos que se dibujan a mano en el atlas en lugar de usar la fuente:
+ * bloques (la fuente los hace más altos que la celda) y líneas de caja
+ * (DejaVu Sans Mono Bold no las incluye). Así encajan sin juntas.
+ */
+export const PROCEDURAL_GLYPHS = '█▀▄▌▐▖▗▘▝▞▚▙▛▜▟▁▂▃▅▆▇▏▎▍▋▊▉─│┌┐└┘├┤┬┴┼╭╮╯╰═║╔╗╚╝';
+
+/** Glifos de la fuente que se estiran al alto de la celda (sombreados). */
+export const STRETCHED_GLYPHS = '░▒▓';
+
+/** Lista única de glifos del atlas; el índice 0 es siempre el espacio. */
+export function atlasGlyphList(): string[] {
+  const seen = new Set<string>([' ']);
+  const list: string[] = [' '];
+  const add = (s: string): void => {
+    for (const ch of Array.from(s)) {
+      if (!seen.has(ch)) {
+        seen.add(ch);
+        list.push(ch);
+      }
+    }
+  };
+  for (const m of MATERIALS) add(RAMPS[m].glyphs);
+  add(RESERVED_ENTITY_GLYPHS);
+  add(UI_GLYPHS);
+  add(PROCEDURAL_GLYPHS);
+  return list;
+}
+
+let staticIndex: Map<string, number> | null = null;
+
+/**
+ * Índice de un glifo en el atlas. El orden del atlas no depende del tamaño de
+ * celda, así que la lógica puede resolver glifos sin tener el atlas construido.
+ * Devuelve 0 (espacio) si el glifo no está registrado.
+ */
+export function glyphIndex(ch: string): number {
+  if (!staticIndex) staticIndex = new Map(atlasGlyphList().map((g, i) => [g, i]));
+  return staticIndex.get(ch) ?? 0;
+}
+
+/** Texto → índices del atlas (resolver una vez, fuera del bucle caliente). */
+export function glyphRun(text: string): Uint16Array {
+  return Uint16Array.from(Array.from(text), glyphIndex);
+}
