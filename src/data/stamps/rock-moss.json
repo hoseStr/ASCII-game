@@ -12,6 +12,7 @@
   ],
   "samples": 4,
   "solid": false,
+  "shadow": "cast",
   "footprint": [
     "...",
     "..."

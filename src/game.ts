@@ -195,6 +195,12 @@ export class Game {
     f.reflector[1] = py;
     f.reflector[2] = nearWater ? 1 : 0;
     f.reflectorColor.set(p.reflectColor);
+    // sombra suave bajo los pies de la princesa (la asienta en el suelo)
+    f.actorShadow[0] = px + 0.25;
+    f.actorShadow[1] = py + 0.45;
+    f.actorShadow[2] = 1.5;
+    f.actorShadow[3] = 0.55;
+    f.actorShadowK = 0.6;
 
     f.particleCount = this.particles.write(f.particles, HUD_ROWS, MAX_PARTICLES);
 

@@ -113,6 +113,12 @@ En el juego:
 - **Colocación.** Las piezas se colocan desde el JSON de la sala, en la clave `props`.
 - **Colisión.** Las piezas sólidas bloquean según su **huella**, que se calcula por tile a partir del alfa de la foto. Las que se ven altas (columna, setas, tocón) solo bloquean por la base.
 - **Piezas decorativas.** El helecho y los nenúfares no bloquean.
+- **Sombras.** Cada objeto (piezas y rocas) proyecta su propia silueta como sombra sobre el suelo.
+  - La luz viene de arriba a la izquierda, como en los árboles, así que la sombra cae hacia abajo a la derecha.
+  - Es más oscura junto a la base, se aclara hacia la punta y tiene penumbra.
+  - Los nenúfares, que son planos, dejan solo una sombra corta sobre el agua.
+  - La sombra oscurece el suelo (glifos y fondo de celda) y nunca la foto.
+- **Profundidad.** Si la princesa está más al norte que la base de un objeto, el objeto la tapa: puede pasar por detrás de una columna o de las amanitas y asomar por un lado. Cada celda de entidad lleva la fila de sus pies en los flags, y cada celda de pieza, la fila de su base. Una sombra suave bajo los pies asienta a la princesa en el suelo.
 - **Fidelidad comprobada.** `npm run verify:stamps` lee de la GPU el glifo y el color de todas las celdas cubiertas por piezas (fotos y rocas) en las 9 salas y los compara con el algoritmo del repo calculado en CPU. Tienen que coincidir al byte, y coinciden. Todo el cálculo es entero (bytes de la foto), así que no hay diferencias de redondeo entre CPU y GPU.
 - **Depuración.** La página `/debug/stamps.html` muestra cada estampa: la imagen procesada, la pieza tal como se ve en el juego y la conversión literal del repo en texto.
 
@@ -227,7 +233,7 @@ Mediciones en una **Intel UHD Graphics integrada** (Alder Lake, D3D11) con Micro
 - **Fotogramas:** 60 fps estables en las 9 salas y durante las transiciones. La variación del total sigue a la frecuencia dinámica de la GPU integrada.
 - **1366×768:** unos 4,1 ms de GPU.
 - **Arranque:** unos 80–230 ms, incluida la decodificación de las 12 estampas. Los 10 programas compilan en unos 25 ms.
-- **Piezas de escenario:** la composición de la capa al entrar en una sala tarda 0,6–3 ms en caliente; ocurre solo al cambiar de sala. Con piezas, la GPU sigue en 5,7–7,1 ms por fotograma a 1080p.
+- **Piezas de escenario:** la composición de la capa al entrar en una sala, sombras incluidas, tarda 0,5–3,6 ms en caliente; ocurre solo al cambiar de sala. Con piezas y sombras, la GPU sigue en 6,3–7,5 ms por fotograma a 1080p.
 - **CPU:** 0,05 ms de simulación y 0,3–0,6 ms de preparación del render por fotograma.
 - **Cero allocations en el bucle caliente:** el heap JS crece 0 bytes/s, medido por `npm run shots`.
 

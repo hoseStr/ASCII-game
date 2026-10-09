@@ -4,7 +4,7 @@
  *   glyphFlags: Uint16 ×2 (índice de glifo en el atlas, flags) → RG16UI
  *   fg, bg:     Uint8 ×4 (RGBA)                                  → RGBA8
  */
-import { FLAG_CLEAR, FLAG_EMISSIVE, FLAG_OCCUPIED } from './shaders';
+import { DEPTH_MASK, DEPTH_SHIFT, FLAG_CLEAR, FLAG_EMISSIVE, FLAG_OCCUPIED } from './shaders';
 
 export class CellBuffer {
   readonly glyphFlags: Uint16Array;
@@ -29,7 +29,9 @@ export class CellBuffer {
   /**
    * Escribe una celda. Colores en sRGB 0..1; `emissive` (0..1) alimenta el bloom;
    * `clear` pide despejar la capa pictórica alrededor; `bgA` 0 deja ver el fondo
-   * pictórico. Parámetros posicionales: sin objetos temporales en el bucle caliente.
+   * pictórico. `depthRow` (fila de los pies de la entidad, o −1) ordena la celda
+   * frente a las piezas de escenario. Parámetros posicionales: sin objetos
+   * temporales en el bucle caliente.
    */
   put(
     col: number,
@@ -44,12 +46,14 @@ export class CellBuffer {
     bgG = 0,
     bgB = 0,
     bgA = 0,
+    depthRow = -1,
   ): void {
     if (col < 0 || row < 0 || col >= this.cols || row >= this.rows) return;
     const i = row * this.cols + col;
     let flags = FLAG_OCCUPIED;
     if (emissive > 0) flags |= FLAG_EMISSIVE;
     if (clear) flags |= FLAG_CLEAR;
+    if (depthRow >= 0) flags |= (Math.min(DEPTH_MASK - 1, depthRow) + 1) << DEPTH_SHIFT;
     this.glyphFlags[i * 2] = glyph;
     this.glyphFlags[i * 2 + 1] = flags;
     const o = i * 4;

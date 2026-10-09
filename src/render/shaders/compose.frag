@@ -50,6 +50,8 @@ uniform highp sampler2D uExtraTex;   // .w = SDF de los obstáculos (negativo de
 uniform int uEdges;                  // 1 = dibujar contornos
 // piezas de escenario: fotos convertidas TAL CUAL (ver render/propLayer.ts)
 uniform highp usampler2D uPropRgb;   // bytes reales de la foto (RGBA8UI), 4 muestras por celda
+uniform highp usampler2D uPropBase;  // fila de base (+1) de la pieza en cada celda, 0 = ninguna
+uniform highp sampler2D uPropShadow; // sombra que los objetos proyectan en el suelo (0..1)
 uniform uint uEdgeGlyph[4];          // ─ │ / \
 
 layout(location = 0) out vec4 oFg;    // rgb, emisividad (bloom)
@@ -223,6 +225,10 @@ void main() {
   // pintado: alrededor de una luz no queda un hueco oscuro, sino su resplandor.
   vec3 fg = clamp(avgc * uInkGain, 0.0, 1.0) * (1.0 - 0.45 * uClearance * clear);
   vec3 bg = uPaper + avgc * uBgFill * (1.0 + 0.6 * clear);
+  // Sombra de los objetos: el fondo de la celda baja por debajo del papel, así la
+  // sombra se lee como una mancha oscura aunque el suelo sea de glifos dispersos.
+  float propSh = uLegibility == 1 ? 0.0 : textureLod(uPropShadow, (vec2(src) + 0.5) / vec2(gridSize), 0.0).r;
+  bg *= 1.0 - 0.6 * propSh;
   float lum = luminance(avg);
   float emissive = smoothstep(0.45, 1.1, lum);
 
@@ -263,7 +269,7 @@ void main() {
     emissive = 0.0;
     noBloom = true;
   }
-  bool pureProp = pure;
+  bool pureProp = pure && uLegibility == 0;
 
   // Contornos de tinta: obstáculos (fuerte) y costa de la isla (suave). Nunca sobre una pieza.
   if (uEdges == 1 && !pureProp) {
@@ -284,10 +290,15 @@ void main() {
     emissive = 0.0;
   }
 
-  // Capa semántica encima.
+  // Capa semántica encima, salvo que la entidad esté DETRÁS de una pieza de
+  // escenario: si sus pies están más al norte que la base de la pieza, la pieza
+  // la tapa (profundidad).
   uvec2 sem = texelFetch(uSem, src, 0).rg;
   float isSem = 0.0;
-  if ((sem.y & FLAG_OCCUPIED) != 0u) {
+  uint semDepth = (sem.y >> DEPTH_SHIFT) & DEPTH_MASK;
+  uint propBase = texelFetch(uPropBase, src, 0).r;
+  bool hidden = pureProp && semDepth > 0u && propBase > 0u && semDepth < propBase;
+  if ((sem.y & FLAG_OCCUPIED) != 0u && !hidden) {
     vec4 sf = texelFetch(uSemFg, src, 0);
     vec4 sb = texelFetch(uSemBg, src, 0);
     glyph = sem.x;

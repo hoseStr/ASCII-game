@@ -18,6 +18,8 @@ export interface StampDef {
   cells: [number, number];
   samples: number;
   solid: boolean;
+  /** sombra sobre el suelo: 'cast' proyecta la silueta, 'flat' es una sombra corta (objetos planos) */
+  shadow: 'cast' | 'flat';
   /** huella por tile, de arriba abajo: '#' sólido, '.' libre */
   footprint: string[];
   credits: { title: string; author: string; license: string; sourceUrl: string };

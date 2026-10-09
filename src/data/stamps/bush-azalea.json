@@ -12,6 +12,7 @@
   ],
   "samples": 4,
   "solid": true,
+  "shadow": "cast",
   "footprint": [
     "....",
     ".##.",

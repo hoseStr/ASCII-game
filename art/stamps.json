@@ -1,5 +1,5 @@
 {
-  "description": "Definición de las estampas (piezas de escenario hechas con fotos). Procesar con: .cache/venv-tools/Scripts/python -P tools/make_stamps.py. rect = [x0, y0, x1, y1] normalizado sobre la foto; sizeTiles = [ancho, alto] en tiles (1 tile = 5×3 celdas = 3×3 unidades). En el juego se convierten a ASCII tal cual, con el algoritmo del repo y los colores reales de la foto.",
+  "description": "Definición de las estampas (piezas de escenario hechas con fotos). Procesar con: .cache/venv-tools/Scripts/python -P tools/make_stamps.py. rect = [x0, y0, x1, y1] normalizado sobre la foto; sizeTiles = [ancho, alto] en tiles (1 tile = 5×3 celdas = 3×3 unidades). En el juego se convierten a ASCII tal cual, con el algoritmo del repo y los colores reales de la foto. shadow: 'cast' (proyecta su silueta sobre el suelo) o 'flat' (objeto plano: sombra corta bajo él).",
   "stamps": [
     {
       "id": "boulder-moss",
@@ -17,7 +17,8 @@
         3
       ],
       "solid": true,
-      "collision": "alpha"
+      "collision": "alpha",
+      "shadow": "cast"
     },
     {
       "id": "mushrooms-red",
@@ -35,7 +36,8 @@
         4
       ],
       "solid": true,
-      "collision": "base"
+      "collision": "base",
+      "shadow": "cast"
     },
     {
       "id": "mushroom-gold",
@@ -81,7 +83,8 @@
           0.26,
           1.0
         ]
-      ]
+      ],
+      "shadow": "cast"
     },
     {
       "id": "fern",
@@ -100,7 +103,8 @@
         4
       ],
       "solid": false,
-      "collision": "none"
+      "collision": "none",
+      "shadow": "cast"
     },
     {
       "id": "stump-moss",
@@ -118,7 +122,8 @@
         4
       ],
       "solid": true,
-      "collision": "base"
+      "collision": "base",
+      "shadow": "cast"
     },
     {
       "id": "log-fallen",
@@ -136,7 +141,8 @@
         2
       ],
       "solid": true,
-      "collision": "base"
+      "collision": "base",
+      "shadow": "cast"
     },
     {
       "id": "lily-white",
@@ -154,7 +160,8 @@
         3
       ],
       "solid": false,
-      "collision": "none"
+      "collision": "none",
+      "shadow": "flat"
     },
     {
       "id": "column",
@@ -172,7 +179,8 @@
         5
       ],
       "solid": true,
-      "collision": "base"
+      "collision": "base",
+      "shadow": "cast"
     },
     {
       "id": "bush-azalea",
@@ -190,7 +198,8 @@
         4
       ],
       "solid": true,
-      "collision": "alpha"
+      "collision": "alpha",
+      "shadow": "cast"
     },
     {
       "id": "rock-moss",
@@ -208,7 +217,8 @@
         2
       ],
       "solid": false,
-      "collision": "none"
+      "collision": "none",
+      "shadow": "cast"
     },
     {
       "id": "rock-granite",
@@ -248,7 +258,8 @@
           0.8,
           0.95
         ]
-      ]
+      ],
+      "shadow": "cast"
     },
     {
       "id": "rock-boulder",
@@ -266,7 +277,8 @@
         2
       ],
       "solid": false,
-      "collision": "none"
+      "collision": "none",
+      "shadow": "cast"
     }
   ]
 }

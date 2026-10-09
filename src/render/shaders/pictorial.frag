@@ -25,6 +25,8 @@ uniform vec4 uShoot;         // estrella fugaz: cabeza xy, dirección zw
 uniform vec2 uShootT;        // intensidad (0 = no hay), largo de la cola
 uniform vec4 uReflector;     // princesa: pies xy, intensidad, —
 uniform vec3 uReflectorColor;
+uniform vec4 uActorShadow;   // sombra bajo la princesa: pies xy, radios xy (unidades)
+uniform float uActorShadowK; // opacidad (0 = sin sombra)
 uniform float uAmbient;
 uniform float uExposure;
 uniform float uFog;
@@ -97,7 +99,13 @@ void main() {
       glow += lc.rgb * (lc.w * exp(-dot(dc, dc) * k));
     }
   }
-  vec3 lightSum = (ambient + dynLight) * ex.y; // sombras horneadas (árboles, rocas)
+  // sombra suave bajo la princesa (contacto con el suelo)
+  float actorSh = 0.0;
+  if (uActorShadowK > 0.0) {
+    vec2 ad = (p - uActorShadow.xy) / uActorShadow.zw;
+    actorSh = uActorShadowK * exp(-dot(ad, ad) * 2.2);
+  }
+  vec3 lightSum = (ambient + dynLight) * ex.y * (1.0 - actorSh); // sombras horneadas (árboles, objetos)
 
   // --- vacío estelar con parallax ---------------------------------------------
   float vy = clamp(cellPos.y / uGrid.y, 0.0, 1.0);
@@ -151,6 +159,7 @@ void main() {
       water += uReflectorColor * exp(-dot(r, r)) * uReflector.z * 0.6;
     }
     water += ambient * smoothstep(0.72, 0.92, rip) * 0.12; // crestas
+    water *= mix(1.0, ex.y, 0.9) * (1.0 - actorSh); // sombras sobre el agua (nenúfares, orilla)
     col = mix(col, water, groundA);
   } else if (groundA > 0.0 && kind != K_VOID) {
     vec3 lab = surf.xyz;

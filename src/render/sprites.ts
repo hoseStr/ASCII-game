@@ -171,7 +171,8 @@ export function buildSpriteSheet(text: string, def: SpriteDef): SpriteSheet {
 /**
  * Dibuja un fotograma con su celda ancla en (col, row). `bright` multiplica el
  * color (destellos), `flash` lo lleva a blanco (golpe), `clear` pide despejar
- * la capa pictórica alrededor.
+ * la capa pictórica alrededor y `depthRow` (fila de los pies) permite que las
+ * piezas de escenario más al sur la tapen.
  */
 export function drawSprite(
   cells: CellBuffer,
@@ -182,6 +183,7 @@ export function drawSprite(
   bright = 1,
   flash = 0,
   clear = true,
+  depthRow = -1,
 ): void {
   const x0 = col - sheet.ax;
   const y0 = row - sheet.ay;
@@ -209,9 +211,10 @@ export function drawSprite(
           sheet.bg[o + 1]! * bright,
           sheet.bg[o + 2]! * bright,
           1,
+          depthRow,
         );
       } else {
-        cells.put(x0 + x, y0 + y, frame.glyphs[i]!, r + (1 - r) * flash, g + (1 - g) * flash, b + (1 - b) * flash, em, clear);
+        cells.put(x0 + x, y0 + y, frame.glyphs[i]!, r + (1 - r) * flash, g + (1 - g) * flash, b + (1 - b) * flash, em, clear, 0, 0, 0, 0, depthRow);
       }
     }
   }

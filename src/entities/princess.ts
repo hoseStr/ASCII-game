@@ -155,7 +155,7 @@ export class Princess {
   draw(cells: CellBuffer, alpha: number, bright = 1, flash = 0): void {
     const col = Math.floor(this.lerpX(alpha) / CELL_ASPECT);
     const row = Math.floor(this.lerpY(alpha) + 0.45) + HUD_ROWS;
-    drawSprite(cells, this.sheet, this.currentFrame(), col, row, bright, flash, true);
+    drawSprite(cells, this.sheet, this.currentFrame(), col, row, bright, flash, true, row);
   }
 }
 

@@ -17,6 +17,7 @@ uniform vec3 uPal[PAL_SIZE];
 uniform int uOctaves;
 uniform int uCliffSteps;   // 48 · límites uniform: bucles reales en D3D (compilación rápida)
 uniform int uOne;          // 1: radio de las vecindades 3×3
+uniform sampler2D uPropShadow; // sombra que proyectan las piezas (fotos y rocas) sobre el suelo
 
 layout(location = 0) out vec4 oTerrain;
 layout(location = 1) out vec4 oSurface;
@@ -218,6 +219,9 @@ void main() {
   // en la entrada. Se marca con borde negativo (la pictórica usa max(rim, 0)).
   float bridgeD = min(typeSdf(p, T_BRIDGE_H, 0.0, 0.0), typeSdf(p, T_BRIDGE_V, 0.0, 0.0));
   if (bridgeD < 1.8) rim = -1.0;
+
+  // Sombra que proyectan los objetos fotográficos (render/propLayer.ts).
+  shadow *= 1.0 - textureLod(uPropShadow, gl_FragCoord.xy / (uGrid * uSamples), 0.0).r;
 
   if (groundA <= 0.0 && kind != float(K_CANOPY)) kind = float(K_VOID);
 

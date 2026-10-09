@@ -276,6 +276,7 @@ def main():
             "cells": [st["sizeTiles"][0] * TILE_COLS, st["sizeTiles"][1] * TILE_ROWS],
             "samples": SAMPLES,
             "solid": bool(st.get("solid")),
+            "shadow": st.get("shadow", "cast"),
             "footprint": fp,
             "credits": {k: src[k] for k in ("title", "author", "license", "sourceUrl")},
         }

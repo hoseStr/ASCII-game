@@ -86,6 +86,7 @@ const testDef = (over: Partial<StampDef> = {}): StampDef => ({
   cells: [15, 6],
   samples: 4,
   solid: true,
+  shadow: 'cast',
   footprint: ['...', '##.'],
   credits: { title: '', author: '', license: 'CC0-1.0', sourceUrl: '' },
   ...over,

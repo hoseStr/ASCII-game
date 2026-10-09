@@ -32,6 +32,13 @@ export const FLAG_OCCUPIED = 1;
 export const FLAG_EMISSIVE = 2;
 /** La celda pide despejar la capa pictórica a su alrededor. */
 export const FLAG_CLEAR = 4;
+/**
+ * Profundidad de una entidad (bits 8..13 de los flags): fila de pantalla de sus
+ * pies + 1 (0 = sin profundidad: siempre encima). Una pieza de escenario cuya base
+ * está más al sur que los pies de la entidad la tapa.
+ */
+export const DEPTH_SHIFT = 8;
+export const DEPTH_MASK = 63;
 
 export const FULLSCREEN_VERT = `#version 300 es
 void main() {
@@ -48,6 +55,8 @@ function defines(extra: Record<string, string | number> = {}): string {
     `#define FLAG_OCCUPIED ${FLAG_OCCUPIED}u`,
     `#define FLAG_EMISSIVE ${FLAG_EMISSIVE}u`,
     `#define FLAG_CLEAR ${FLAG_CLEAR}u`,
+    `#define DEPTH_SHIFT ${DEPTH_SHIFT}u`,
+    `#define DEPTH_MASK ${DEPTH_MASK}u`,
     `#define CELL_W_UNITS ${CELL_ASPECT.toFixed(3)}`,
   ];
   MATERIALS.forEach((m, i) => lines.push(`#define MAT_${m.toUpperCase()} ${i}`));
