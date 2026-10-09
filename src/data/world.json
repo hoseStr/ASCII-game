@@ -1,0 +1,27 @@
+{
+  "description": "Grafo del mundo. Las salidas entre salas vecinas se deducen de la cuadrícula y de los tiles caminables del borde.",
+  "start": {
+    "room": "ow-1-1",
+    "tile": [
+      16,
+      8
+    ]
+  },
+  "overworld": [
+    [
+      "ow-0-0",
+      "ow-1-0",
+      "ow-2-0"
+    ],
+    [
+      "ow-0-1",
+      "ow-1-1",
+      "ow-2-1"
+    ],
+    [
+      "ow-0-2",
+      "ow-1-2",
+      "ow-2-2"
+    ]
+  ]
+}

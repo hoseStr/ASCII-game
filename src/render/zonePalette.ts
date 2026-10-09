@@ -24,6 +24,15 @@ export const PALETTE_SLOTS = [
   'ambient',
   'water',
   'waterDeep',
+  'rock',
+  'rockFront',
+  'canopy',
+  'canopyDark',
+  'trunk',
+  'path',
+  'flower',
+  'flowerB',
+  'shore',
 ] as const;
 export type PaletteSlot = (typeof PALETTE_SLOTS)[number];
 
@@ -39,6 +48,8 @@ export interface ZoneData {
 }
 
 export interface ZonePaletteGpu {
+  /** nombre visible de la zona */
+  name: string;
   /** OKLab de cada ranura, plano (3 floats por ranura) para uniform3fv. */
   surfaceOklab: Float32Array;
   lights: Record<string, Vec3>;
@@ -67,6 +78,7 @@ export function loadZonePalette(id: string): ZonePaletteGpu {
   const mapValues = (rec: Record<string, Oklch>, f: (c: Oklch) => Vec3): Record<string, Vec3> =>
     Object.fromEntries(Object.entries(rec).map(([k, v]) => [k, f(v)]));
   return {
+    name: z.name,
     surfaceOklab,
     lights: mapValues(z.lights, oklchToLinear),
     ui: mapValues(z.ui, oklchToSrgb),

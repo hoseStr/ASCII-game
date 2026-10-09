@@ -1,9 +1,9 @@
 /**
  * Capturas de revisión: levanta el servidor de Vite, abre el juego con
- * Playwright y guarda varias capturas en shots/, junto con los errores de
- * consola y las métricas de rendimiento (stats.json).
+ * Playwright y guarda capturas en shots/, junto con los errores de consola y
+ * las métricas de rendimiento (stats.json).
  *
- * Uso: npm run shots [-- --headed] [-- --browser=chromium]
+ * Uso: npm run shots [-- --headed] [-- --browser=chromium] [-- --only=salas,transicion,princesa,768p,atlas]
  * Por defecto usa Microsoft Edge instalado (channel msedge), con GPU.
  */
 import { mkdirSync, writeFileSync } from 'node:fs';
@@ -11,25 +11,29 @@ import { resolve } from 'node:path';
 import { chromium } from 'playwright';
 import { createServer } from 'vite';
 
-const args = new Set(process.argv.slice(2));
-const headed = args.has('--headed');
-const browserArg = [...args].find((a) => a.startsWith('--browser='))?.split('=')[1] ?? 'msedge';
+const args = process.argv.slice(2);
+const headed = args.includes('--headed');
+const browserArg = args.find((a) => a.startsWith('--browser='))?.split('=')[1] ?? 'msedge';
+const only = args.find((a) => a.startsWith('--only='))?.split('=')[1]?.split(',') ?? null;
+const want = (name) => !only || only.includes(name);
 const outDir = resolve(import.meta.dirname, '..', 'shots');
 mkdirSync(outDir, { recursive: true });
 
-const server = await createServer({ root: resolve(import.meta.dirname, '..'), server: { port: 5199, strictPort: true }, logLevel: 'error' });
+const server = await createServer({
+  root: resolve(import.meta.dirname, '..'),
+  server: { port: 5199, strictPort: true },
+  logLevel: 'error',
+});
 await server.listen();
 const base = 'http://localhost:5199/';
-
 const browser = await chromium.launch({
   headless: !headed,
   channel: browserArg === 'chromium' ? undefined : browserArg,
   args: ['--ignore-gpu-blocklist', '--enable-gpu', '--use-angle=d3d11', '--enable-unsafe-swiftshader'],
 });
-
 const report = { browser: browserArg, pages: {} };
 
-async function shootGame(name, viewport, actions) {
+async function openGame(viewport) {
   const page = await browser.newPage({ viewport, deviceScaleFactor: 1 });
   const errors = [];
   page.on('console', (m) => {
@@ -37,23 +41,24 @@ async function shootGame(name, viewport, actions) {
   });
   page.on('pageerror', (e) => errors.push(`pageerror: ${e.message}`));
   await page.goto(base);
-  await page.waitForFunction(() => document.body.dataset.ready === '1', null, { timeout: 20000 });
-  const gl = await page.evaluate(() => {
-    const c = document.createElement('canvas').getContext('webgl2');
-    const dbg = c?.getExtension('WEBGL_debug_renderer_info');
-    return dbg ? c.getParameter(dbg.UNMASKED_RENDERER_WEBGL) : 'desconocido';
-  });
-  const shots = [];
-  for (const [label, fn, waitMs] of actions) {
-    if (fn) await fn(page);
-    await page.waitForTimeout(waitMs ?? 1500);
-    const file = `${name}-${label}.png`;
-    await page.screenshot({ path: resolve(outDir, file) });
-    const stats = await page.evaluate(() => window.__adg.stats());
-    shots.push({ file, quality: await page.evaluate(() => window.__adg.settings.quality), gpuMs: stats.gpu, fps: stats.fps });
+  try {
+    await page.waitForFunction(() => document.body.dataset.ready === '1', null, { timeout: 20000 });
+  } catch (e) {
+    console.error('El juego no arrancó:', errors.join('\n'));
+    throw e;
   }
-  // Indicador de allocations en el bucle: crecimiento del heap JS en reposo (Chromium).
-  const heap = await page.evaluate(async () => {
+  return { page, errors };
+}
+
+async function shot(page, file) {
+  await page.screenshot({ path: resolve(outDir, file) });
+  const stats = await page.evaluate(() => window.__adg.stats());
+  const quality = await page.evaluate(() => window.__adg.settings.quality);
+  return { file, quality, gpuMs: stats.gpu, fps: stats.fps };
+}
+
+async function heapGrowth(page) {
+  return page.evaluate(async () => {
     const mem = performance.memory;
     if (!mem) return null;
     const samples = [];
@@ -63,49 +68,101 @@ async function shootGame(name, viewport, actions) {
     }
     let growth = 0;
     for (let i = 1; i < samples.length; i++) growth += Math.max(0, samples[i] - samples[i - 1]);
-    return { bytesPerSecond: Math.round(growth / 3), start: samples[0], end: samples.at(-1) };
+    return { bytesPerSecond: Math.round(growth / 3) };
   });
-  const stats = await page.evaluate(() => window.__adg.stats());
-  report.pages[name] = { viewport, gl, stats, heap, errors, shots };
+}
+
+const ROOMS = ['ow-0-0', 'ow-1-0', 'ow-2-0', 'ow-0-1', 'ow-1-1', 'ow-2-1', 'ow-0-2', 'ow-1-2', 'ow-2-2'];
+
+if (want('salas')) {
+  const { page, errors } = await openGame({ width: 1920, height: 1080 });
+  const shots = [];
+  await page.waitForTimeout(2500);
+  for (const id of ROOMS) {
+    await page.evaluate((rid) => window.__adg.game.debugGoto(rid), id);
+    await page.waitForTimeout(1400);
+    shots.push(await shot(page, `sala-${id}.png`));
+  }
+  report.pages.salas = { errors, shots, heap: await heapGrowth(page) };
   await page.close();
 }
 
-const holdKeys = (keys, ms) => async (page) => {
-  for (const k of keys) await page.keyboard.down(k);
-  await page.waitForTimeout(ms);
-  for (const k of keys) await page.keyboard.up(k);
-};
+if (want('transicion')) {
+  const { page, errors } = await openGame({ width: 1920, height: 1080 });
+  const shots = [];
+  await page.waitForTimeout(2000);
+  // hacia el este desde el claro central: a mitad del deslizamiento
+  await page.evaluate(() => window.__adg.game.debugPlace(93.5, 25.5, 'right'));
+  await page.waitForTimeout(300);
+  await page.keyboard.down('ArrowRight');
+  await page.waitForFunction(() => window.__adg.game.transition.active, null, { timeout: 5000 });
+  await page.keyboard.up('ArrowRight');
+  await page.waitForTimeout(380);
+  shots.push(await shot(page, 'transicion-este-mitad.png'));
+  await page.waitForTimeout(1500);
+  shots.push(await shot(page, 'transicion-este-final.png'));
+  // hacia el norte
+  await page.evaluate(() => window.__adg.game.debugGoto('ow-1-1'));
+  await page.evaluate(() => window.__adg.game.debugPlace(48, 1.2, 'up'));
+  await page.waitForTimeout(400);
+  await page.keyboard.down('ArrowUp');
+  await page.waitForFunction(() => window.__adg.game.transition.active, null, { timeout: 5000 });
+  await page.keyboard.up('ArrowUp');
+  await page.waitForTimeout(330);
+  shots.push(await shot(page, 'transicion-norte-mitad.png'));
+  // derretido (lo usará la entrada a la mazmorra en la Fase 4)
+  await page.waitForTimeout(1500);
+  await page.evaluate(() => window.__adg.game.debugMelt());
+  await page.waitForTimeout(700);
+  shots.push(await shot(page, 'transicion-derretido.png'));
+  report.pages.transicion = { errors, shots };
+  await page.close();
+}
 
-await shootGame('1080p', { width: 1920, height: 1080 }, [
-  ['00-inicio', null, 3500],
-  ['01-halo-izquierda', holdKeys(['ArrowLeft', 'ArrowUp'], 900), 1200],
-  ['02-halo-vacio', holdKeys(['ArrowRight'], 1900), 1500],
-  ['03-legibilidad-F4', (p) => p.keyboard.press('F4'), 600],
-  ['04-fidelidad-repo', async (p) => {
-    await p.keyboard.press('F4');
-    await p.keyboard.press('F3');
-    await p.keyboard.press('Digit1');
-    await p.keyboard.press('Digit2');
-    await p.keyboard.press('F3');
-  }, 800],
-  ['05-calidad-alta', async (p) => {
-    await p.keyboard.press('F3');
-    await p.keyboard.press('Digit1');
-    await p.keyboard.press('Digit2');
-    await p.keyboard.press('Digit3');
-  }, 2500],
-]);
+if (want('princesa')) {
+  const { page, errors } = await openGame({ width: 1920, height: 1080 });
+  const shots = [];
+  await page.waitForTimeout(2000);
+  const dirs = [
+    ['ArrowDown', 'abajo'],
+    ['ArrowLeft', 'izquierda'],
+    ['ArrowUp', 'arriba'],
+    ['ArrowRight', 'derecha'],
+  ];
+  for (const [key, label] of dirs) {
+    await page.evaluate(() => window.__adg.game.debugPlace(48, 24, 'down'));
+    await page.keyboard.down(key);
+    await page.waitForTimeout(300);
+    // recorte centrado en la princesa (celda de 12×20 px a 1080p)
+    const pos = await page.evaluate(() => [window.__adg.game.princess.x, window.__adg.game.princess.y]);
+    const cx = (pos[0] / 0.6) * 12;
+    const cy = (pos[1] + 6) * 20;
+    await page.screenshot({ path: resolve(outDir, `princesa-${label}.png`), clip: { x: cx - 120, y: cy - 130, width: 240, height: 200 } });
+    shots.push({ file: `princesa-${label}.png` });
+    await page.keyboard.up(key);
+  }
+  await page.keyboard.press('F4');
+  await page.waitForTimeout(500);
+  shots.push(await shot(page, 'legibilidad-F4.png'));
+  report.pages.princesa = { errors, shots };
+  await page.close();
+}
 
-await shootGame('768p', { width: 1366, height: 768 }, [['00-inicio', null, 3500]]);
+if (want('768p')) {
+  const { page, errors } = await openGame({ width: 1366, height: 768 });
+  await page.waitForTimeout(3000);
+  const shots = [await shot(page, '768p-inicio.png')];
+  report.pages['768p'] = { errors, shots, heap: await heapGrowth(page), stats: await page.evaluate(() => window.__adg.stats()) };
+  await page.close();
+}
 
-// Página del atlas
-{
+if (want('atlas')) {
   const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
   await page.goto(`${base}debug/atlas.html`);
   await page.waitForSelector('table tbody tr', { timeout: 20000 });
-  await page.screenshot({ path: resolve(outDir, 'atlas.png'), fullPage: false });
+  await page.screenshot({ path: resolve(outDir, 'atlas.png') });
   const summary = await page.$eval('.summary', (el) => el.textContent?.replace(/\s+/g, ' ').trim());
   report.pages.atlas = { errors, summary };
   await page.close();

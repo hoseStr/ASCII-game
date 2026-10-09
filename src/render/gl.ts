@@ -26,6 +26,8 @@ function compile(gl: GL, type: number, src: string, label: string): WebGLShader 
 /** Programa enlazado con las ubicaciones de uniforms resueltas una sola vez. */
 export class Program {
   readonly handle: WebGLProgram;
+  /** tiempo de compilación y enlace (ms), para vigilar el arranque */
+  readonly compileMs: number;
   private readonly locations = new Map<string, WebGLUniformLocation>();
 
   constructor(
@@ -34,6 +36,7 @@ export class Program {
     fs: string,
     readonly label: string,
   ) {
+    const t0 = performance.now();
     const p = gl.createProgram()!;
     const v = compile(gl, gl.VERTEX_SHADER, vs, `${label}.vert`);
     const f = compile(gl, gl.FRAGMENT_SHADER, fs, `${label}.frag`);
@@ -47,6 +50,7 @@ export class Program {
     }
     this.handle = p;
     const n = gl.getProgramParameter(p, gl.ACTIVE_UNIFORMS) as number;
+    this.compileMs = performance.now() - t0;
     for (let i = 0; i < n; i++) {
       const info = gl.getActiveUniform(p, i);
       if (!info) continue;

@@ -9,8 +9,8 @@ import { GameLoop } from './core/loop';
 import { CellBuffer } from './render/cellBuffer';
 import { Renderer, createFrameParams, type RenderSettings } from './render/renderer';
 import { loadGameFont } from './render/fontLoader';
-import { loadZonePalette } from './render/zonePalette';
-import { IslandDemo } from './scenes/islandDemo';
+import { Game } from './game';
+import { World } from './world/world';
 import { DebugOverlay } from './ui/debugOverlay';
 
 function showMessage(root: HTMLElement, title: string, body: string): void {
@@ -42,7 +42,10 @@ function saveQuality(q: Quality): void {
   }
 }
 
+let bootMs = 0;
+
 async function boot(): Promise<void> {
+  const bootStart = performance.now();
   const root = document.getElementById('app')!;
   const canvas = document.createElement('canvas');
   canvas.className = 'screen';
@@ -71,21 +74,15 @@ async function boot(): Promise<void> {
   };
   reducedMotionQuery.addEventListener('change', (e) => (settings.reducedEffects = e.matches));
 
-  const palette = loadZonePalette('forest');
-  const scene = new IslandDemo();
+  const world = new World();
   const cells = new CellBuffer(GRID_COLS, GRID_ROWS);
   const frame = createFrameParams();
   const input = new Input();
   input.attach(window);
   const overlay = new DebugOverlay(root);
 
-  let renderer = createRenderer();
-  function createRenderer(): Renderer {
-    const r = new Renderer(canvas, font, GRID_COLS, GRID_ROWS);
-    r.setPalette(palette);
-    r.setField(scene.field);
-    return r;
-  }
+  let renderer = new Renderer(canvas, font, GRID_COLS, GRID_ROWS);
+  const game = new Game(world, renderer);
 
   // Tamaño exacto en píxeles de dispositivo (texto nítido).
   let pendingW = Math.round(canvas.clientWidth * devicePixelRatio);
@@ -117,23 +114,29 @@ async function boot(): Promise<void> {
       settings.quality = QUALITY_ORDER[(QUALITY_ORDER.indexOf(settings.quality) + 1) % QUALITY_ORDER.length]!;
       saveQuality(settings.quality);
     } else if (code === 'Digit4') settings.post = !settings.post;
-    else if (code === 'Digit5') scene.freezeTime = !scene.freezeTime;
+    else if (code === 'Digit5') game.freezeTime = !game.freezeTime;
+    else if (code === 'Digit6') game.debugMelt();
     renderer.resetTemporal();
   };
 
   // Se evalúa solo cuando el overlay se redibuja (4 Hz), no en cada fotograma.
-  const sceneInfo = (): string => `escena: isla de prueba · luces ${frame.lightCount} · luciérnagas ${scene.activeFireflies}`;
+  const sceneInfo = (): string =>
+    `sala: ${game.room.meta.id} (${game.room.meta.name}) · luces ${frame.lightCount} · partículas ${game.particles.active} · princesa (${game.princess.x.toFixed(1)}, ${game.princess.y.toFixed(1)})`;
 
   const loop = new GameLoop(
     {
       step(dt) {
         input.update();
-        scene.step(dt, input);
+        game.step(dt, input);
       },
       render(alpha, frameSeconds) {
         renderer.resize(pendingW, pendingH);
+        if (game.snapshotRequested) {
+          renderer.captureSnapshot();
+          game.snapshotRequested = false;
+        }
         frame.dt = frameSeconds;
-        scene.fill(frame, cells, palette, alpha, settings.reducedEffects);
+        game.fill(frame, cells, alpha, settings);
         renderer.render(frame, cells, settings);
         overlay.update(performance.now(), loop, renderer, settings, sceneInfo);
       },
@@ -146,14 +149,15 @@ async function boot(): Promise<void> {
     loop.stop();
   });
   canvas.addEventListener('webglcontextrestored', () => {
-    renderer = createRenderer();
+    renderer = new Renderer(canvas, font, GRID_COLS, GRID_ROWS);
+    game.attachRenderer(renderer);
     loop.start();
   });
 
   // Gancho para la herramienta de capturas y la depuración manual.
   (window as unknown as { __adg: unknown }).__adg = {
     settings,
-    scene,
+    game,
     stats: () => ({
       fps: 1000 / loop.frameMs,
       frameMs: loop.frameMs,
@@ -163,11 +167,14 @@ async function boot(): Promise<void> {
       gpuAvailable: renderer.timer.available,
       layout: renderer.layout,
       missing: renderer.atlas?.missing ?? [],
+      compile: renderer.compileReport,
+      bootMs: bootMs,
     }),
     overlay,
   };
 
   loop.start();
+  bootMs = performance.now() - bootStart;
   document.body.dataset.ready = '1';
 }
 

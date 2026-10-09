@@ -2,7 +2,10 @@
 
 Aventura de acción top-down onírica para el navegador, renderizada como un **video ASCII generado en tiempo real**. Hereda el algoritmo de conversión de [ASCII-generator](https://github.com/vietnh1009/ASCII-generator), portado fielmente a TypeScript y GLSL.
 
-> **Estado: Fase 1 (motor de render).** De momento el juego es una demo: una isla flotante con niebla, luciérnagas, cristales, vacío estelar y un halo de luz que se mueve con las flechas. La jugabilidad llega en las fases 2 a 4.
+> **Estado: Fase 2 (mundo).** Ya puedes recorrer el overworld de 3×3 islas flotantes con la princesa.
+> - Cada sala tiene su paleta de zona y se carga desde mapas ASCII.
+> - Hay colisiones y transiciones entre pantallas.
+> - El combate llega en la Fase 3, y los objetos, la mazmorra y el HUD completo en la Fase 4.
 
 ## Cómo ejecutarlo
 
@@ -14,115 +17,167 @@ npm test           # tests unitarios (Vitest)
 npm run shots      # capturas de revisión + métricas en shots/ (Playwright + Edge instalado)
 ```
 
-Requisitos: Node 22.12 o superior y un navegador con WebGL2. El repo incluye un `.npmrc` con `legacy-peer-deps=true`, que esquiva un fallo de npm 10 al resolver los peers opcionales de Vitest.
+- **Requisitos:** Node 22.12 o superior y un navegador con WebGL2.
+- **`.npmrc`:** el repo incluye `legacy-peer-deps=true`, que esquiva un fallo de npm 10 al resolver los peers opcionales de Vitest.
 
-## Controles (demo de la Fase 1)
+## Controles
 
 | Tecla | Acción |
 |---|---|
-| Flechas / WASD (o stick / cruceta del mando) | Mover el halo de luz |
-| F3 | Overlay de rendimiento (FPS, tiempos de CPU y GPU por pasada) |
-| F4 | Modo legibilidad: oculta la capa pictórica |
+| Flechas / WASD (o stick / cruceta del mando) | Mover a la princesa. Son 4 direcciones y manda la última pulsada, como en los Zelda clásicos |
+| F3 | Overlay de rendimiento (FPS, tiempos de CPU y de GPU por pasada) |
+| F4 | Modo legibilidad: oculta la capa pictórica y muestra la colisión |
 
 Con el overlay F3 abierto se activan estas teclas:
 
 | Tecla | Acción |
 |---|---|
-| 1 | Sentido de la rampa: `light` (por defecto) o `ink` (literal del repo) |
-| 2 | Modo fidelidad: conversión idéntica al repo, sin suavizado ni realces |
-| 3 | Calidad: baja, media o alta (se guarda en `localStorage`) |
-| 4 | Post-proceso sí/no |
+| 1 | Sentido de la rampa: `light` o `ink` (el literal del repo) |
+| 2 | Modo fidelidad: conversión idéntica al repo |
+| 3 | Calidad: baja, media o alta |
+| 4 | Post-proceso |
 | 5 | Congelar el tiempo |
+| 6 | Probar la transición de derretido |
 
-La página de depuración del atlas está en `/debug/atlas.html`. Muestra todos los glifos, su tinta medida, los encajes y las rampas por material.
+La página de depuración del atlas está en `/debug/atlas.html`.
 
-## El algoritmo heredado del repo
+## El mundo
 
-Este algoritmo está verificado con tests dorados contra la salida real de `img2txt.py`. Los fixtures se generan con `tools/make_golden.py`, que ejecuta el script original sin modificarlo.
+El overworld tiene 9 salas en una cuadrícula de 3×3, cada una con su paleta de zona:
 
-- **Celda de muestreo:** `ancho = W / columnas` y `alto = 2 · ancho`. Se promedian **todos** los píxeles del bloque.
-- **Luminancia:** `(R + G + B) / 3` sin pesos sobre sRGB, en la versión a color. La versión en gris usa la BT.601 de OpenCV, que en OpenCV 4 trabaja en punto fijo de 15 bits.
-- **Índice:** `min(floor(L · N / 255), N − 1)`.
-- **Rampa:** la de Paul Bourke, con 70 glifos, de más tinta a vacío.
-- **Color:** el glifo toma el promedio del bloque.
+| | Oeste | Centro | Este |
+|---|---|---|---|
+| **Norte** | Jardín de Cristal · *jardín* | Escalinata Lunar · *ruinas* | Umbral del Santuario · *umbral* |
+| **Centro** | Bosque Hondo · *bosque hondo* | **Claro de las Luciérnagas** (inicio) · *bosque* | Orilla de los Espejos · *lago* |
+| **Sur** | Raíces Colgantes · *bosque hondo* | Puente de Niebla · *niebla* | Lago de los Espejos · *lago* |
 
-### Lo que el juego añade
+Los tests garantizan tres propiedades del mundo:
 
-Todos estos añadidos se desactivan con el modo fidelidad, salvo el sentido de rampa, que tiene su propio toggle:
+- Las salidas entre salas vecinas son simétricas y coinciden tile a tile, así que nunca se aparece dentro de un muro.
+- El borde exterior del mundo es cerrado.
+- Todas las salas se alcanzan caminando desde el inicio.
 
-- **Sentido de rampa `light`:** con fondo oscuro, más luz da glifos más densos. En el repo, el blanco puro era un espacio.
-- **Rampas por material:** luz, niebla, agua, vegetación y cristal. Las de textura se ordenan por tinta medida, con un port corregido de `sort_chars`.
-- **Estabilidad temporal:** cada celda suaviza su luminancia (EMA) y aplica histéresis contra el fotograma anterior, para que los glifos no parpadeen en los umbrales.
-- **Corrección de aspecto:** el repo muestreaba celdas 1:2 pero dibujaba celdas 3:5, así que su salida salía estirada un 20–26 %. Aquí los círculos son círculos.
+### Cómo crear una sala nueva
+
+1. **Dibuja el mapa** en `src/data/rooms/<id>.txt`: 16 líneas de 32 caracteres. Cada carácter es un tile de 5×3 celdas, visualmente cuadrado.
+
+   | Carácter | Tile | ¿Caminable? | Se pinta en |
+   |---|---|---|---|
+   | `.` | vacío (abismo con estrellas) | no | capa pictórica |
+   | `,` | suelo | sí | capa pictórica |
+   | `:` | camino | sí | capa pictórica |
+   | `"` | flores | sí | capa pictórica |
+   | `#` | roca (bloque en vista 3/4) | no | capa pictórica |
+   | `T` | árbol (copa, tronco y sombra) | no | capa pictórica |
+   | `~` | agua (refleja el cielo y las luces) | no | capa pictórica |
+   | `*` | cristal (emite luz) | no | capa pictórica |
+   | `=` | puente este-oeste | sí | capa semántica |
+   | `H` | puente norte-sur | sí | capa semántica |
+
+   La leyenda está en `src/data/legend.json`.
+
+2. **Escribe los metadatos** en `src/data/rooms/<id>.json`:
+   ```json
+   { "id": "ow-1-1", "name": "Claro de las Luciérnagas", "zone": "forest", "map": "ow-1-1.txt", "fireflies": 26 }
+   ```
+   `zone` es una paleta de `src/data/palettes.json`, definida en OKLCH.
+
+3. **Colócala** en la cuadrícula de `src/data/world.json`.
+4. **Conéctala.** Las salidas se deducen solas: si dos salas son vecinas y sus bordes tienen tiles caminables en las mismas posiciones, hay paso. Usa `=` o `H` para tender un puente sobre el vacío hasta el borde.
+5. **Valídala** con `npm test`, que comprueba tamaño, leyenda, simetría de bordes y alcanzabilidad.
+
+### Sprites
+
+Los sprites son texto: `src/data/sprites/princess.txt` y `princess.json`.
+
+- Cada fotograma tiene una capa de glifos y una capa de claves de color. La clave `.` deja la celda transparente.
+- Las claves se definen en el JSON, en OKLCH, con fondo y emisión opcionales.
+- La vista izquierda se genera espejando la derecha.
+- Los glifos de entidades salen de un conjunto reservado que el decorado nunca usa. Un test lo verifica.
 
 ## Arquitectura del render
 
 ```
- Input ─► Simulación 60 Hz fija (seed) ─► estado del mundo
+ Input ─► Simulación 60 Hz fija (seed) ─► sala actual, princesa, partículas, transición
                                               │ (interpolado al render)
-            ┌─────────────────────────────────┴───────────────────────┐
-            ▼                                                         ▼
-  Capa semántica (CPU, typed arrays)          Uniforms: cámara, luces (≤48), cristales,
-  glyph u16 · flags · fg rgba8 · bg rgba8       estrella fugaz · SDF de islas (por sala)
-            │                                                         │
-            │      P0 TERRENO (solo al cambiar sala/paleta/calidad): costa deshilachada,
-            │         acantilados en cono, albedo del suelo → texturas estáticas
-            │                                                         ▼
-            │      P1 PICTÓRICA a S×S muestras/celda: vacío estelar + parallax, luz,
-            │         luciérnagas, cristales, niebla fbm, respiración → color + material
-            ▼                                                         ▼  promedio de bloque (= repo)
-  P2 CONVERSIÓN + COMPOSICIÓN @160×54: luma (R+G+B)/3 → EMA + histéresis (estado t−1)
-     → rampa[material] → glifo · capa semántica encima · despeje alrededor de entidades
-            ▼  estado de celda (glifo, fg, bg, emisivo)
-  P3 GLIFOS a resolución de pantalla (atlas a píxel exacto, celdas de tamaño entero)
+            ┌─────────────────────────────────┴──────────────────────────────┐
+            ▼                                                                ▼
+  Capa semántica (CPU, typed arrays)                 Uniforms: luces (≤48), cristales, cámara,
+  puentes · princesa · HUD (y colisión en F4)        estrella fugaz, reflejo; partículas (VBO)
+            │                                                                │
+            │   P0 TERRENO (solo al cambiar de sala, paleta o calidad): desde el tilemap
+            │      → costa deshilachada, acantilados en cono, caminos, flores, orillas,
+            │        rocas 3/4, árboles con sombra → texturas estáticas
+            │                                                                ▼
+            │   P1 PICTÓRICA a S×S muestras/celda: cielo con parallax, luz, agua animada
+            │      (refleja estrellas, luces y a la princesa), niebla fbm, respiración
+            │      + partículas pintadas como luz (estela de polvo de estrellas)
+            ▼                                                                ▼  promedio de bloque (= repo)
+  P2 CONVERSIÓN + COMPOSICIÓN @160×54: luma (R+G+B)/3 → EMA + histéresis → rampa[material]
+     → glifo · semántica encima · despeje alrededor de entidades
+     · transiciones: deslizamiento con glifos que se desordenan / derretido (instantánea t−1)
             ▼
-  P4 BLOOM filtro dual (½ · ¼ · ⅛ · 1/16)  →  P5 FINAL: viñeta índigo, aberración radial
-                                                 sutil, grano fino, desenfoque onírico
+  P3 GLIFOS (atlas a píxel exacto) → P4 BLOOM filtro dual → P5 FINAL (viñeta, aberración, grano)
 ```
 
-### Decisiones clave
+### Reparto entre capas
 
-- **Grilla:** fija de 160×54 celdas con proporción 3:5. A 1080p cada celda mide 12×20 px; a 1366×768, 8×14 px con letterbox.
-- **Atlas:** se re-rasteriza al tamaño exacto de la celda en píxeles de dispositivo, para que el texto quede nítido.
-- **Glifos especiales:** bloques y líneas de caja se dibujan a mano. Los glifos que se salen de la celda se escalan para caber.
-- **Glifos ausentes:** el atlas consulta el `cmap` de la fuente con un parser propio, así que el navegador nunca sustituye la fuente en silencio.
-- **Movimiento:** los glifos se ajustan a la celda, mientras luces, halos y estelas se mueven de forma continua en la capa pictórica.
-- **Mundo:** se mide en unidades visuales isótropas (1 unidad = alto de fila; una columna = 0,6 unidades).
+- **Capa pictórica:** todo el terreno natural, incluidos los obstáculos (rocas, árboles, agua, vacío). Así recibe la luz dinámica, y la Linterna Lunar de la Fase 4 podrá revelar zonas oscuras.
+- **Capa semántica:** estructuras construidas (puentes), entidades y HUD.
+- **Modo F4:** dibuja el tilemap de colisión, para comprobar la jugabilidad sin la capa pictórica.
+
+### Rampas por material
+
+Se ordenan por tinta medida, salvo la del repo y la de luz, que conservan el orden de autor.
+
+| Material | Rampa |
+|---|---|
+| roca y acantilado | la del repo, letras |
+| luz | `˙ · ∘ ✧ ✦` |
+| niebla | `. · ∴ ░ ▒ ▓` |
+| agua | `. , ~ ∽ ≈` |
+| vegetación | `. , ' ; ↟ τ ʎ γ ♠ ♣ ψ Ψ` |
+| cristal | `· ◦ △ ◊ ◇ ♦ ◈ ◆ ▲` |
+| flores | `. · ⚘ ✾ ✿ ❀` |
+| caminos | `. · ∶ : ∴ ∷` |
+
+### Ruido por textura
+
+El ruido es de valor, leído de una textura de 256×256 (el truco de iq para 3D): una lectura por octava. El ruido de gradiente original tardaba **7 s en compilar** en D3D11 (ANGLE); este tarda 5 ms.
 
 ## Rendimiento medido
 
-Mediciones en una **Intel UHD Graphics integrada** (Alder Lake, D3D11) con Microsoft Edge, con tiempos de GPU de `EXT_disjoint_timer_query_webgl2`:
+Mediciones en una **Intel UHD Graphics integrada** (Alder Lake, D3D11) con Microsoft Edge, a 1920×1080 en calidad media, con tiempos de GPU de `EXT_disjoint_timer_query_webgl2`:
 
-| Resolución · calidad | Pictórica | Conversión | Glifos | Bloom | Final | **Total GPU** | FPS |
-|---|---|---|---|---|---|---|---|
-| 1920×1080 · media (S=2) | 0,9–1,4 | 0,05 | 0,5–1,0 | 1,0–1,25 | 1,6–1,85 | **4,1–5,5 ms** | 60 |
-| 1920×1080 · alta (S=4) | 2,3 | 0,10 | 0,54 | 1,03 | 1,59 | **5,6 ms** | 60 |
-| 1366×768 · media | 1,7 | 0,10 | 0,74 | 0,74 | 1,11 | **4,4 ms** | 60 |
+| Pasada | ms |
+|---|---|
+| Pictórica | 0,6–1,5 |
+| Conversión | 0,05–0,1 |
+| Glifos | 0,6–1,8 |
+| Bloom | 1,1–2,0 |
+| Final | 1,7–2,7 |
+| **Total GPU** | **4,1–7,9** |
 
-- **CPU:** la simulación tarda unos 0,05 ms por paso y la preparación del render, unos 0,3 ms por fotograma.
-- **Cero allocations en el bucle caliente:** el heap JS crece 0 bytes/s en reposo (lo mide `npm run shots`).
+- **Fotogramas:** 60 fps estables en las 9 salas y durante las transiciones. La variación del total sigue a la frecuencia dinámica de la GPU integrada.
+- **1366×768:** unos 4,1 ms de GPU.
+- **Arranque:** unos 80 ms; los 10 programas compilan en unos 25 ms.
+- **CPU:** 0,05 ms de simulación y 0,3–0,6 ms de preparación del render por fotograma.
+- **Cero allocations en el bucle caliente:** el heap JS crece 0 bytes/s, medido por `npm run shots`.
 
 ## Estructura
 
 ```
 src/
   config.ts              grilla, presets de calidad
-  core/                  bucle de paso fijo, entrada (teclado + mando), RNG con semilla
-  render/
-    ascii.ts             port fiel del conversor del repo (puro, testeado)
-    ttf.ts               lector de cmap/hmtx (verificación de glifos)
-    glyphs.ts            rampas por material, glifos reservados, registro del atlas
-    atlas.ts             rasterizado del atlas + tinta medida + encaje
-    palette.ts           OKLab / OKLCH ↔ sRGB con mapeo de gamut
-    zonePalette.ts       paletas de zona (datos) → uniforms
-    field.ts             SDF anisótropo exacto + suavizado
-    renderer.ts          orquesta las pasadas, FBOs, tiempos de GPU
-    shaders/*.glsl       terreno, pictórica, composición, glifos, bloom, final
-  scenes/islandDemo.ts   demo de la Fase 1
-  ui/debugOverlay.ts     overlay F3
-  debug/atlasPage.ts     página /debug/atlas.html
-  data/palettes.json     paletas por zona en OKLCH
-tests/                   Vitest: fidelidad dorada, fuente, legibilidad, núcleo, layout
+  game.ts                orquestador: sala actual, princesa, transiciones, relleno del fotograma
+  core/                  bucle de paso fijo, entrada (teclado + mando, 4 direcciones), RNG con semilla
+  render/                port del conversor, atlas, paletas OKLab, sprites, renderer y shaders
+  world/                 tiles y leyenda, salas, mundo, colisión AABB, transiciones, puentes
+  entities/princess.ts   la princesa
+  systems/               partículas (pool), luciérnagas, cielo, luz en CPU
+  ui/                    HUD, overlay F3
+  data/                  salas (.txt + .json), mundo, leyenda, paletas, sprites
+tests/                   fidelidad dorada, fuente, legibilidad, núcleo, layout, mundo, colisión, sistemas
 tools/                   make_golden.py (fixtures), screenshot.mjs (capturas + métricas)
 ```
 

@@ -1,0 +1,202 @@
+# Princesa · 5×4 celdas. La celda ancla (pies) es la columna 2 de la fila 3.
+# Claves: h cabello · H cabello en sombra · C corona · s ojo sobre piel
+#         m boca sobre piel · k piel · D vestido claro · d vestido en sombra
+#         b corpiño · y cabello sobre vestido (fondo) · x punta del cabello
+
+@frame down.idle.0
+▗▟♛▙▖
+▐•ᴗ•▌
+▐◢▼◣▌
+◢███◣
+:colors
+hhChh
+hsmsh
+hDbDh
+dDDDd
+
+@frame down.idle.1
+▗▟♛▙▖
+▐•ᴗ•▌
+▟◢▼◣▙
+◢███◣
+:colors
+hhChh
+hsmsh
+hDbDh
+dDDDd
+
+@frame down.walk.0
+▗▟♛▙▖
+▐•ᴗ•▌
+▐◢▼◣▙
+▟███◣
+:colors
+hhChh
+hsmsh
+hDbDh
+dDDDd
+
+@frame down.walk.1
+▗▟♛▙▖
+▐•ᴗ•▌
+▐◢▼◣▌
+◢███◣
+:colors
+hhChh
+hsmsh
+hDbDh
+dDDDd
+
+@frame down.walk.2
+▗▟♛▙▖
+▐•ᴗ•▌
+▟◢▼◣▌
+◢███▙
+:colors
+hhChh
+hsmsh
+hDbDh
+dDDDd
+
+@frame down.walk.3
+▗▟♛▙▖
+▐•ᴗ•▌
+▐◢▼◣▌
+◢███◣
+:colors
+hhChh
+hsmsh
+hDbDh
+dDDDd
+
+@frame up.idle.0
+▗▟♛▙▖
+▐███▌
+▝▜█▛▘
+◢███◣
+:colors
+hhChh
+hHHHh
+xyyyx
+dDDDd
+
+@frame up.idle.1
+▗▟♛▙▖
+▐███▌
+▐▜█▛▌
+◢███◣
+:colors
+hhChh
+hHHHh
+xyyyx
+dDDDd
+
+@frame up.walk.0
+▗▟♛▙▖
+▐███▌
+▝▜█▛▌
+▟███◣
+:colors
+hhChh
+hHHHh
+xyyyx
+dDDDd
+
+@frame up.walk.1
+▗▟♛▙▖
+▐███▌
+▝▜█▛▘
+◢███◣
+:colors
+hhChh
+hHHHh
+xyyyx
+dDDDd
+
+@frame up.walk.2
+▗▟♛▙▖
+▐███▌
+▐▜█▛▘
+◢███▙
+:colors
+hhChh
+hHHHh
+xyyyx
+dDDDd
+
+@frame up.walk.3
+▗▟♛▙▖
+▐███▌
+▝▜█▛▘
+◢███◣
+:colors
+hhChh
+hHHHh
+xyyyx
+dDDDd
+
+@frame right.idle.0
+ ▗♛▙▖
+▐██• 
+▝██▸ 
+◢███◣
+:colors
+.hChh
+hhhs.
+xDDk.
+dDDDd
+
+@frame right.idle.1
+ ▗♛▙▖
+▐██• 
+▐██▸ 
+◢███◣
+:colors
+.hChh
+hhhs.
+xDDk.
+dDDDd
+
+@frame right.walk.0
+ ▗♛▙▖
+▐██• 
+▝██▸ 
+▟███◣
+:colors
+.hChh
+hhhs.
+xDDk.
+dDDDd
+
+@frame right.walk.1
+ ▗♛▙▖
+▐██• 
+▐██▸ 
+◢███◣
+:colors
+.hChh
+hhhs.
+xDDk.
+dDDDd
+
+@frame right.walk.2
+ ▗♛▙▖
+▐██• 
+▝██▸ 
+◢███▙
+:colors
+.hChh
+hhhs.
+xDDk.
+dDDDd
+
+@frame right.walk.3
+ ▗♛▙▖
+▐██• 
+▐██▸ 
+◢███◣
+:colors
+.hChh
+hhhs.
+xDDk.
+dDDDd

@@ -31,6 +31,12 @@ const DEBUG_KEYS = new Set(['F3', 'F4']);
 
 const DEADZONE = 0.3;
 
+export const DIR_NONE = 0;
+export const DIR_UP = 1;
+export const DIR_DOWN = 2;
+export const DIR_LEFT = 3;
+export const DIR_RIGHT = 4;
+
 function btn(pad: Gamepad, i: number): boolean {
   return pad.buttons[i]?.pressed ?? false;
 }
@@ -40,6 +46,9 @@ export class Input {
   private readonly padHeld = new Uint8Array(ACTIONS.length);
   private readonly current = new Uint8Array(ACTIONS.length);
   private readonly previous = new Uint8Array(ACTIONS.length);
+  /** orden de pulsación de cada acción (contador creciente): la dirección más reciente manda */
+  private readonly pressOrder = new Float64Array(ACTIONS.length);
+  private pressCounter = 0;
   /** eje analógico del mando (sin cuantizar) */
   padX = 0;
   padY = 0;
@@ -68,7 +77,9 @@ export class Input {
   private readonly onKeyDown = (e: KeyboardEvent): void => {
     const action = KEY_MAP[e.code];
     if (action) {
-      this.keyHeld[ACTION_INDEX[action]] = 1;
+      const i = ACTION_INDEX[action];
+      if (!this.keyHeld[i]) this.pressOrder[i] = ++this.pressCounter;
+      this.keyHeld[i] = 1;
       e.preventDefault();
     }
     if (DEBUG_KEYS.has(e.code) || /^Digit\d$/.test(e.code)) {
@@ -110,6 +121,28 @@ export class Input {
     return this.current[i] === 1 && this.previous[i] === 0;
   }
 
+  /**
+   * Dirección en 4 ejes (como los Zelda clásicos): si hay varias pulsadas,
+   * manda la más reciente. 0 = ninguna; ver DIR_* para el resto.
+   * Con mando, el eje dominante del stick o la cruceta.
+   */
+  moveDir(): number {
+    if (Math.abs(this.padX) > DEADZONE || Math.abs(this.padY) > DEADZONE) {
+      if (Math.abs(this.padX) > Math.abs(this.padY)) return this.padX > 0 ? DIR_RIGHT : DIR_LEFT;
+      return this.padY > 0 ? DIR_DOWN : DIR_UP;
+    }
+    let best = 0;
+    let bestOrder = -1;
+    for (let d = 0; d < 4; d++) {
+      const i = d; // up, down, left, right ocupan los índices 0..3 de ACTIONS
+      if (this.current[i] && this.pressOrder[i]! >= bestOrder) {
+        bestOrder = this.pressOrder[i]!;
+        best = d + 1;
+      }
+    }
+    return best;
+  }
+
   /** Dirección de movimiento normalizada (teclado digital o stick analógico). */
   axisX(): number {
     if (Math.abs(this.padX) > DEADZONE) return this.padX;
@@ -134,6 +167,10 @@ export class Input {
       const ay = pad.axes[1] ?? 0;
       if (Math.abs(ax) > Math.abs(this.padX)) this.padX = ax;
       if (Math.abs(ay) > Math.abs(this.padY)) this.padY = ay;
+      if (btn(pad, 12)) this.padY = -1;
+      if (btn(pad, 13)) this.padY = 1;
+      if (btn(pad, 14)) this.padX = -1;
+      if (btn(pad, 15)) this.padX = 1;
       if (btn(pad, 12) || ay < -0.5) this.padHeld[ACTION_INDEX.up] = 1;
       if (btn(pad, 13) || ay > 0.5) this.padHeld[ACTION_INDEX.down] = 1;
       if (btn(pad, 14) || ax < -0.5) this.padHeld[ACTION_INDEX.left] = 1;

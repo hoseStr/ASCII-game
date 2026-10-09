@@ -1,0 +1,15 @@
+{
+  "description": "Leyenda de los mapas de sala (32×16 caracteres; cada carácter = un tile de 5×3 celdas).",
+  "tiles": {
+    ".": "void",
+    ",": "ground",
+    ":": "path",
+    "\"": "flowers",
+    "#": "rock",
+    "T": "tree",
+    "~": "water",
+    "*": "crystal",
+    "=": "bridgeH",
+    "H": "bridgeV"
+  }
+}
