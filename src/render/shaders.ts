@@ -12,6 +12,7 @@ import particlesVertSrc from './shaders/particles.vert?raw';
 import pictorialSrc from './shaders/pictorial.frag?raw';
 import rasterSrc from './shaders/raster.frag?raw';
 import terrainSrc from './shaders/terrain.frag?raw';
+import { CELL_ASPECT } from '../config';
 import { MATERIALS } from './glyphs';
 import { PALETTE_SLOTS } from './zonePalette';
 import { TILE, TILE_UNITS } from '../world/tiles';
@@ -47,6 +48,7 @@ function defines(extra: Record<string, string | number> = {}): string {
     `#define FLAG_OCCUPIED ${FLAG_OCCUPIED}u`,
     `#define FLAG_EMISSIVE ${FLAG_EMISSIVE}u`,
     `#define FLAG_CLEAR ${FLAG_CLEAR}u`,
+    `#define CELL_W_UNITS ${CELL_ASPECT.toFixed(3)}`,
   ];
   MATERIALS.forEach((m, i) => lines.push(`#define MAT_${m.toUpperCase()} ${i}`));
   SURFACE_KINDS.forEach((k, i) => lines.push(`#define K_${k.replace(/([A-Z])/g, '_$1').toUpperCase()} ${i}`));

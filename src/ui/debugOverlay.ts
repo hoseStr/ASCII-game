@@ -47,7 +47,7 @@ export class DebugOverlay {
       extra(),
       '',
       `[1] rampa: ${s.direction}   [2] fidelidad repo: ${on(s.fidelity)}   [3] calidad: ${s.quality}   [4] post: ${on(s.post)}   [5] congelar tiempo`,
-      `F4 legibilidad: ${on(s.legibility)}   efectos reducidos: ${on(s.reducedEffects)}`,
+      `F4 legibilidad: ${on(s.legibility)}   efectos reducidos: ${on(s.reducedEffects)}   [6] derretido   [7] contornos: ${on(s.edges)}`,
     ].join('\n');
   }
 }

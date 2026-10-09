@@ -71,6 +71,7 @@ async function boot(): Promise<void> {
     quality: loadQuality(),
     post: true,
     reducedEffects: reducedMotionQuery.matches,
+    edges: true,
   };
   reducedMotionQuery.addEventListener('change', (e) => (settings.reducedEffects = e.matches));
 
@@ -116,6 +117,7 @@ async function boot(): Promise<void> {
     } else if (code === 'Digit4') settings.post = !settings.post;
     else if (code === 'Digit5') game.freezeTime = !game.freezeTime;
     else if (code === 'Digit6') game.debugMelt();
+    else if (code === 'Digit7') settings.edges = !settings.edges;
     renderer.resetTemporal();
   };
 

@@ -7,7 +7,7 @@
 import { REPO_RAMP_COMPLEX } from './ascii';
 
 /** Materiales de la capa pictórica. El id es el índice (se codifica en el shader). */
-export const MATERIALS = ['base', 'light', 'mist', 'water', 'veg', 'crystal', 'flower', 'path'] as const;
+export const MATERIALS = ['base', 'light', 'mist', 'water', 'veg', 'crystal', 'flower', 'path', 'foliage'] as const;
 export type Material = (typeof MATERIALS)[number];
 export const MATERIAL_ID: Record<Material, number> = {
   base: 0,
@@ -18,6 +18,7 @@ export const MATERIAL_ID: Record<Material, number> = {
   crystal: 5,
   flower: 6,
   path: 7,
+  foliage: 8,
 };
 
 export interface RampDef {
@@ -39,12 +40,16 @@ export const RAMPS: Record<Material, RampDef> = {
   // Sin ○ ◌: en movimiento y al titilar se leían como letras 'o'. La luz es destello puro.
   light: { glyphs: ' ˙·∘✧✦', order: 'authored' },
   mist: { glyphs: ' .·∴░▒▓', order: 'measured' },
-  water: { glyphs: ' .,~∽≈', order: 'measured' },
-  veg: { glyphs: ` .,';↟τʎγ♠♣ψΨ`, order: 'measured' },
+  // Agua: olas, nunca comas (eran iguales al pasto y el lago se confundía con el suelo).
+  water: { glyphs: ' .~∽≈', order: 'measured' },
+  // Pasto del suelo: marcas finas. Nunca glifos que parezcan árboles (eso es follaje).
+  veg: { glyphs: ` .,';ʎγ`, order: 'measured' },
   crystal: { glyphs: ' ·◦△◊◇♦◈◆▲', order: 'measured' },
   flower: { glyphs: ' .·⚘✾✿❀', order: 'measured' },
   // caminos y arena: puntos, polvo y grava (nunca letras ni bloques)
   path: { glyphs: ' .·∶:∴∷', order: 'measured' },
+  // Copas de los árboles (obstáculos): follaje denso, distinto del pasto.
+  foliage: { glyphs: ' ·τ↟♠♣ψΨ', order: 'measured' },
 };
 
 /**
@@ -69,6 +74,9 @@ export const UI_GLYPHS =
  * (DejaVu Sans Mono Bold no las incluye). Así encajan sin juntas.
  */
 export const PROCEDURAL_GLYPHS = BLOCK_GLYPHS + '─│┌┐└┘├┤┬┴┼╭╮╯╰═║╔╗╚╝';
+
+/** Contornos de obstáculos y costa (capa pictórica): horizontal, vertical, / y \\. */
+export const EDGE_GLYPHS = ['─', '│', '/', '\\'] as const;
 
 /** Glifos de la fuente que se estiran al alto de la celda (sombreados). */
 export const STRETCHED_GLYPHS = '░▒▓';

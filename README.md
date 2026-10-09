@@ -38,6 +38,7 @@ Con el overlay F3 abierto se activan estas teclas:
 | 4 | Post-proceso |
 | 5 | Congelar el tiempo |
 | 6 | Probar la transición de derretido |
+| 7 | Contornos de tinta sí/no |
 
 La página de depuración del atlas está en `/debug/atlas.html`.
 
@@ -126,6 +127,15 @@ Los sprites son texto: `src/data/sprites/princess.txt` y `princess.json`.
 - **Capa semántica:** estructuras construidas (puentes), entidades y HUD.
 - **Modo F4:** dibuja el tilemap de colisión, para comprobar la jugabilidad sin la capa pictórica.
 
+### Legibilidad: contornos de tinta
+
+- **Obstáculos con contorno.** Rocas, árboles, agua y cristales llevan un contorno de una celda de grosor (`─ │ / \`), orientado según el borde y más brillante que su relleno.
+  - Las formas se calculan con un SDF por región de tiles, así que el contorno coincide con la colisión.
+  - Los tiles contiguos del mismo tipo forman una sola masa (un bosque, un lago), sin costuras internas.
+- **Costa con línea suave.** La costa de cada isla lleva una línea más tenue, que se interrumpe en la entrada de los puentes.
+- **Caminos.** Tienen color cálido y claro, borde limpio y un margen oscuro en el suelo vecino.
+- **Pasto distinto del follaje.** El pasto usa marcas finas (`. , ' ;`) y las copas de los árboles, follaje denso (`τ ↟ ♠ ♣ ψ`), así que el suelo nunca parece bosque.
+
 ### Rampas por material
 
 Se ordenan por tinta medida, salvo la del repo y la de luz, que conservan el orden de autor.
@@ -135,8 +145,9 @@ Se ordenan por tinta medida, salvo la del repo y la de luz, que conservan el ord
 | roca y acantilado | la del repo, letras |
 | luz | `˙ · ∘ ✧ ✦` |
 | niebla | `. · ∴ ░ ▒ ▓` |
-| agua | `. , ~ ∽ ≈` |
-| vegetación | `. , ' ; ↟ τ ʎ γ ♠ ♣ ψ Ψ` |
+| agua | `. ~ ∽ ≈` |
+| pasto (suelo) | `. , ' ; ʎ γ` |
+| follaje (copas, obstáculo) | `· τ ↟ ♠ ♣ ψ Ψ` |
 | cristal | `· ◦ △ ◊ ◇ ♦ ◈ ◆ ▲` |
 | flores | `. · ⚘ ✾ ✿ ❀` |
 | caminos | `. · ∶ : ∴ ∷` |
@@ -151,12 +162,12 @@ Mediciones en una **Intel UHD Graphics integrada** (Alder Lake, D3D11) con Micro
 
 | Pasada | ms |
 |---|---|
-| Pictórica | 0,6–1,5 |
-| Conversión | 0,05–0,1 |
+| Pictórica | 0,9–1,2 |
+| Conversión (con contornos) | 0,12–0,2 |
 | Glifos | 0,6–1,8 |
 | Bloom | 1,1–2,0 |
 | Final | 1,7–2,7 |
-| **Total GPU** | **4,1–7,9** |
+| **Total GPU** | **6,6–7,2** |
 
 - **Fotogramas:** 60 fps estables en las 9 salas y durante las transiciones. La variación del total sigue a la frecuencia dinámica de la GPU integrada.
 - **1366×768:** unos 4,1 ms de GPU.

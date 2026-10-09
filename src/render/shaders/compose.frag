@@ -44,6 +44,11 @@ uniform highp sampler2D uSnapFg;
 uniform highp sampler2D uSnapBg;
 uniform highp sampler2D uSnapGlyph;
 uniform highp sampler2D uSnapState;
+// contornos de tinta
+uniform highp sampler2D uTerrainTex; // .x = SDF de la costa (negativo dentro de la isla)
+uniform highp sampler2D uExtraTex;   // .w = SDF de los obstáculos (negativo dentro)
+uniform int uEdges;                  // 1 = dibujar contornos
+uniform uint uEdgeGlyph[4];          // ─ │ / \
 
 layout(location = 0) out vec4 oFg;    // rgb, emisividad (bloom)
 layout(location = 1) out vec4 oBg;
@@ -62,6 +67,55 @@ int scrambleIdx(int idx, int mat, ivec2 cell, float amount) {
   int n = uRampLen[mat];
   float h = hash12(cell + ivec2(uFrame / 3 * 17, uFrame / 3 * 5)) - 0.5;
   return clamp(idx + int(round(h * 2.0 * amount * float(n) * 0.7)), 0, n - 1);
+}
+
+// SDF por celda (muestra central del bloque pictórico).
+float obstacleAt(ivec2 c, ivec2 gridSize) {
+  c = clamp(c, ivec2(0), gridSize - 1);
+  return texelFetch(uExtraTex, c * uS + uS / 2, 0).w;
+}
+float coastAt(ivec2 c, ivec2 gridSize) {
+  c = clamp(c, ivec2(0), gridSize - 1);
+  return texelFetch(uTerrainTex, c * uS + uS / 2, 0).x;
+}
+
+// Glifo de contorno según la orientación del borde (perpendicular al gradiente), corregida por el aspecto
+// de la celda: ─ │ / \.
+uint edgeGlyph(float l, float r, float u, float d) {
+  vec2 g = vec2((r - l) / CELL_W_UNITS, d - u);
+  float ax = abs(g.x);
+  float ay = abs(g.y);
+  if (ay < ax * 0.42) return uEdgeGlyph[1];
+  if (ax < ay * 0.42) return uEdgeGlyph[0];
+  return g.x * g.y > 0.0 ? uEdgeGlyph[2] : uEdgeGlyph[3];
+}
+
+float sdfAt(ivec2 c, ivec2 gridSize, int which) {
+  return which == 0 ? obstacleAt(c, gridSize) : coastAt(c, gridSize);
+}
+
+vec3 pictAt(ivec2 c) {
+  return clamp(texelFetch(uPict, c * uS + uS / 2, 0).rgb, 0.0, 1.0);
+}
+
+// Contorno de una celda de grosor: entre dos celdas vecinas con distinto signo,
+// la línea va en la más cercana al borde real (de dentro o de fuera). `inner`
+// devuelve la celda interior del par (de ella se toma el color).
+bool contour(ivec2 src, ivec2 gridSize, int which, out uint glyph, out ivec2 inner) {
+  float d0 = sdfAt(src, gridSize, which);
+  float l = sdfAt(src + ivec2(-1, 0), gridSize, which);
+  float r = sdfAt(src + ivec2(1, 0), gridSize, which);
+  float u = sdfAt(src + ivec2(0, -1), gridSize, which);
+  float d = sdfAt(src + ivec2(0, 1), gridSize, which);
+  bool in0 = d0 < 0.0;
+  inner = src;
+  bool hit = false;
+  if ((l < 0.0) != in0 && abs(d0) <= abs(l)) { hit = true; if (!in0) inner = src + ivec2(-1, 0); }
+  if ((r < 0.0) != in0 && abs(d0) <= abs(r)) { hit = true; if (!in0) inner = src + ivec2(1, 0); }
+  if ((u < 0.0) != in0 && abs(d0) <= abs(u)) { hit = true; if (!in0) inner = src + ivec2(0, -1); }
+  if ((d < 0.0) != in0 && abs(d0) <= abs(d)) { hit = true; if (!in0) inner = src + ivec2(0, 1); }
+  glyph = edgeGlyph(l, r, u, d);
+  return hit;
 }
 
 vec4 glyphOut(uint glyph, float semantic) {
@@ -169,6 +223,19 @@ void main() {
   vec3 bg = uPaper + avgc * uBgFill * (1.0 + 0.6 * clear);
   float lum = luminance(avg);
   float emissive = smoothstep(0.45, 1.1, lum);
+
+  // Contornos de tinta: obstáculos (fuerte) y costa de la isla (suave).
+  if (uEdges == 1) {
+    ivec2 inner;
+    uint eg;
+    if (contour(src, gridSize, 0, eg, inner)) {
+      glyph = eg;
+      fg = clamp(pictAt(inner) * uInkGain * 1.45 + 0.07, 0.0, 1.0);
+    } else if (texelFetch(uExtraTex, src * uS + uS / 2, 0).x >= 0.0 && contour(src, gridSize, 1, eg, inner)) {
+      glyph = eg;
+      fg = clamp(pictAt(inner) * uInkGain * 1.15 + 0.04, 0.0, 1.0);
+    }
+  }
 
   if (uLegibility == 1) {
     glyph = 0u;

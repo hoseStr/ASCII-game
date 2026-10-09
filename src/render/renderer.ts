@@ -14,7 +14,7 @@ import type { RampDirection } from './ascii';
 import { buildAtlas, type GlyphAtlas } from './atlas';
 import type { CellBuffer } from './cellBuffer';
 import { Program, RenderTarget, bindTex, createTexture, formats, type GL, type TexFormat } from './gl';
-import { MATERIALS } from './glyphs';
+import { EDGE_GLYPHS, MATERIALS, glyphIndex } from './glyphs';
 import { GpuTimer } from './gpuTimer';
 import { computeLayout, type GridLayout } from './layout';
 import { FULLSCREEN_VERT, MAX_CRYSTALS, MAX_LIGHTS, MAX_PARTICLES, PARTICLE_STRIDE, shaderSources } from './shaders';
@@ -31,6 +31,8 @@ export interface RenderSettings {
   post: boolean;
   /** accesibilidad: sin aberración cromática (la sacudida la anula el juego) */
   reducedEffects: boolean;
+  /** contornos de tinta en obstáculos y costa */
+  edges: boolean;
 }
 
 /** Datos de un fotograma; los arrays se reutilizan (cero allocations). */
@@ -455,6 +457,10 @@ export class Renderer {
     bindTex(gl, p, 'uSnapBg', 8, this.snapshot.textures[1]!);
     bindTex(gl, p, 'uSnapGlyph', 9, this.snapshot.textures[2]!);
     bindTex(gl, p, 'uSnapState', 10, this.snapshot.textures[3]!);
+    bindTex(gl, p, 'uTerrainTex', 11, terrain.textures[0]!);
+    bindTex(gl, p, 'uExtraTex', 12, terrain.textures[2]!);
+    gl.uniform1i(p.u('uEdges'), s.fidelity || !s.edges ? 0 : 1);
+    gl.uniform1uiv(p.u('uEdgeGlyph'), EDGE_GLYPH_IDS);
     gl.uniform1iv(p.u('uRampLen'), this.rampLen);
     gl.uniform1i(p.u('uS'), q.samples);
     gl.uniform1i(p.u('uInk'), s.direction === 'ink' ? 1 : 0);
@@ -649,6 +655,9 @@ function createNoiseTexture(gl: GL): WebGLTexture {
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
   return tex;
 }
+
+/** Glifos de contorno (─ │ / \) como índices del atlas, para el uniform. */
+const EDGE_GLYPH_IDS = Uint32Array.from(EDGE_GLYPHS, (g) => glyphIndex(g));
 
 /** Arrays constantes para drawBuffers (evita crear arrays por fotograma). */
 const GL_NONE = 0;

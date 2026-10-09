@@ -133,7 +133,7 @@ void main() {
     vec2 q = p + vec2(sin(p.y * 2.3 + uTime * 1.4) * 0.16 + sin(p.y * 0.6 - uTime * 0.5) * 0.3, sin(p.x * 0.8 + uTime * 0.9) * 0.08);
     float rip = fbm(vec3(q.x * 0.5, q.y * 1.7, uTime * 0.2), 3);
     vec3 lab = mix(uPal[P_WATER], uPal[P_WATER_DEEP], clamp(smoothstep(0.0, 5.0, depth) * 0.75 + (rip - 0.5) * 0.35, 0.0, 1.0));
-    vec3 water = oklabToLinear(lab) * (0.45 * ambient + 0.35 * dynLight);
+    vec3 water = oklabToLinear(lab) * (0.7 * ambient + 0.4 * dynLight);
     water += starField(vec2(q.x, 2.0 * uGrid.y - q.y), -uCam, 0.8) * 0.55;
     vec3 refl = vec3(0.0);
     for (int i = 0; i < uLightCount; i++) {
@@ -154,7 +154,7 @@ void main() {
     col = mix(col, water, groundA);
   } else if (groundA > 0.0 && kind != K_VOID) {
     vec3 lab = surf.xyz;
-    if (kind == K_GROUND) lab = mix(lab, uPal[P_RIM], ex.x * 0.55);
+    if (kind == K_GROUND) lab = mix(lab, uPal[P_RIM], max(ex.x, 0.0) * 0.55);
     // Las copas y la roca reciben más cielo que el suelo del bosque; los frentes, menos.
     float face = kind == K_CANOPY ? 1.5 : kind == K_ROCK ? 1.12 : (kind == K_ROCK_FRONT || kind == K_TRUNK ? 0.7 : 1.0);
     col = mix(col, oklabToLinear(lab) * lightSum * face, groundA);
@@ -209,6 +209,7 @@ void main() {
     best = surfW;
     mat = float(MAT_VEG);
     if (kind == K_WATER) mat = float(MAT_WATER);
+    else if (kind == K_CANOPY) mat = float(MAT_FOLIAGE);
     else if (kind == K_ROCK || kind == K_ROCK_FRONT || kind == K_TRUNK) mat = float(MAT_BASE);
     else if (kind == K_PATH || kind == K_SHORE) mat = float(MAT_PATH);
     else if (kind == K_FLOWER) mat = float(MAT_FLOWER);
