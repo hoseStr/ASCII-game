@@ -19,7 +19,7 @@ import { Hud } from './ui/hud';
 import { CLOSED_EDGES, type EdgePolicy } from './world/collision';
 import { DIR_VEC, tileAt, type Dir, type RoomRenderData } from './world/room';
 import { PropLayer } from './render/propLayer';
-import type { StampImage } from './render/stamps';
+import type { StampAsset } from './render/stamps';
 import { Structures } from './world/structures';
 import { HUD_ROWS, ROOM_H, ROOM_W, TILE, TILE_COLS, TILE_PROPS, TILE_ROWS, TILE_UNITS } from './world/tiles';
 import { Transition, type TransitionKind } from './world/transitions';
@@ -56,7 +56,7 @@ export class Game {
   constructor(
     readonly world: World,
     private renderer: Renderer,
-    private readonly stampImages: Map<string, StampImage>,
+    private readonly stampImages: Map<string, StampAsset>,
   ) {
     const start = world.data.start;
     this.enterRoom(start.room);
@@ -203,6 +203,17 @@ export class Game {
     f.actorShadowK = 0.6;
 
     f.particleCount = this.particles.write(f.particles, HUD_ROWS, MAX_PARTICLES);
+
+    // Piezas animadas (viento): cambiar de fotograma y subir solo la región que cambió.
+    if (this.propLayer.animate(this.time, !settings.reducedEffects)) {
+      const L = this.propLayer;
+      const r = L.dirtyRects;
+      for (let k = 0; k < L.dirtyCount; k++) {
+        const x0 = r[k * 4]!;
+        const y0 = r[k * 4 + 1]!;
+        this.renderer.updatePropRegion(L.rgb, x0, y0, r[k * 4 + 2]! - x0 + 1, r[k * 4 + 3]! - y0 + 1);
+      }
+    }
 
     // Transición
     const tr = this.transition;

@@ -20,11 +20,19 @@
       ]
     },
     {
-      "stamp": "fern",
+      "stamp": "fern-2",
       "tile": [
         18,
-        9
+        10
       ]
+    },
+    {
+      "stamp": "fern-1",
+      "tile": [
+        10,
+        9
+      ],
+      "flip": true
     }
   ]
 }

@@ -1,0 +1,17 @@
+{
+  "variant": "v0",
+  "object": "namaqualand_boulder_05",
+  "metersPerPixel": 0.005025490505827798,
+  "size": [
+    360,
+    230
+  ],
+  "bboxMeters": [
+    1.3640307188034058,
+    0.7479793429374695,
+    0.5383217334747314
+  ],
+  "frames": 0,
+  "elevationDeg": 50.0,
+  "exposure": 1.0
+}

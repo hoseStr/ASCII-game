@@ -1,0 +1,17 @@
+{
+  "variant": "v0",
+  "object": "boulder_02",
+  "metersPerPixel": 0.009110410465134515,
+  "size": [
+    360,
+    209
+  ],
+  "bboxMeters": [
+    2.532142162322998,
+    1.2342629432678223,
+    0.8826377987861633
+  ],
+  "frames": 0,
+  "elevationDeg": 50.0,
+  "exposure": 1.0
+}

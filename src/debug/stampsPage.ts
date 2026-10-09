@@ -1,7 +1,8 @@
 /**
- * Página de depuración de las estampas (piezas de escenario hechas con fotos):
- * imagen procesada, conversión literal del repo (texto) y la pieza tal como se
- * ve en el juego (conversión pura con los colores reales), más la licencia.
+ * Página de depuración de las estampas (piezas de escenario hechas con fotos y
+ * con renders de modelos 3D): imagen procesada, conversión literal del repo
+ * (texto) y la pieza tal como se ve en el juego (conversión pura con los colores
+ * reales; las animadas se reproducen en bucle), más la licencia.
  */
 import { FONT_FAMILY } from '../render/atlas';
 import { loadGameFont } from '../render/fontLoader';
@@ -81,10 +82,12 @@ async function main(): Promise<void> {
   const mainEl = document.createElement('main');
   root.appendChild(mainEl);
   mainEl.innerHTML = `
-    <h1>Estampas: fotos convertidas en piezas de escenario</h1>
-    <p class="note">Cada pieza parte de una foto en dominio público o CC0. tools/make_stamps.py la recorta y la reduce a 4×4 muestras por celda. En el juego se convierte a ASCII tal cual, con el algoritmo del repo y los colores reales de la foto: sin tinte, luz, niebla ni contornos.</p>`;
+    <h1>Estampas: fotos y renders convertidos en piezas de escenario</h1>
+    <p class="note">Cada pieza parte de una foto o de un modelo 3D fotoescaneado (renderizado con tools/render_studio.py), en dominio público o CC0. tools/make_stamps.py la recorta y la reduce a 4×4 muestras por celda. En el juego se convierte a ASCII tal cual, con el algoritmo del repo y los colores reales de la imagen: sin tinte, luz, niebla ni contornos. Las piezas animadas se reproducen aquí en bucle.</p>`;
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   for (const def of [...defs.values()].sort((a, b) => a.id.localeCompare(b.id))) {
-    const img = images.get(def.id)!;
+    const asset = images.get(def.id)!;
+    const img = asset.frames[0]!;
     const sec = document.createElement('section');
     const h = document.createElement('h2');
     h.textContent = def.id;
@@ -97,7 +100,7 @@ async function main(): Promise<void> {
     a.target = '_blank';
     a.rel = 'noopener';
     meta.append(
-      `${def.use === 'prop' ? 'pieza' : 'foto de roca (rocas #)'} · ${def.sizeTiles[0]}×${def.sizeTiles[1]} tiles (${def.cells[0]}×${def.cells[1]} celdas) · ${def.solid ? `sólida, huella ${def.footprint.join('/')}` : 'decorativa'} · foto: `,
+      `${def.use === 'prop' ? 'pieza' : 'roca (rocas #)'}${def.frames > 1 ? ` · animada (${def.frames} fotogramas)` : ''}${def.shadow === 'render' ? ' · sombra renderizada' : ''} · ${def.sizeTiles[0]}×${def.sizeTiles[1]} tiles (${def.cells[0]}×${def.cells[1]} celdas) · ${def.solid ? `sólida, huella ${def.footprint.join('/')}` : 'decorativa'} · ${def.shadow === 'render' ? 'modelo 3D' : 'foto'}: `,
       a,
       ` de ${def.credits.author} · ${def.credits.license}`,
     );
@@ -113,7 +116,18 @@ async function main(): Promise<void> {
       row.appendChild(d);
     };
     fig('imagen procesada', pngCanvas(img, 3));
-    fig('en el juego (algoritmo del repo, colores reales)', gameCanvas(img, def.samples, paper));
+    const game = gameCanvas(img, def.samples, paper);
+    fig(`en el juego (algoritmo del repo, colores reales${def.frames > 1 ? `, ${def.fps} fps` : ''})`, game);
+    if (def.frames > 1 && !reduced) {
+      // bucle de animación: cada fotograma convertido con el mismo algoritmo
+      const frames = asset.frames.map((f) => gameCanvas(f, def.samples, paper));
+      const ctx = game.getContext('2d')!;
+      let k = 0;
+      setInterval(() => {
+        k = (k + 1) % frames.length;
+        ctx.drawImage(frames[k]!, 0, 0);
+      }, 1000 / def.fps);
+    }
     const pre = document.createElement('pre');
     pre.textContent = previews[`../data/stamps/${def.id}.preview.txt`] ?? '';
     fig('algoritmo literal del repo (img2txt, fondo blanco)', pre);

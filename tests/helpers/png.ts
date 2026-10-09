@@ -1,6 +1,7 @@
 /**
  * Decodificador PNG mínimo para los tests (Node, sin dependencias): 8 bits por
- * canal, sin entrelazado, tipos de color RGB (2) y RGBA (6). Devuelve RGBA.
+ * canal, sin entrelazado, tipos de color gris (0), RGB (2) y RGBA (6). Devuelve RGBA
+ * (el gris se replica en R, G y B).
  */
 import { inflateSync } from 'node:zlib';
 
@@ -31,7 +32,7 @@ export function decodePng(buf: Uint8Array): DecodedPng {
       const depth = data[8];
       colorType = data[9]!;
       const interlace = data[12];
-      if (depth !== 8 || interlace !== 0 || (colorType !== 2 && colorType !== 6)) {
+      if (depth !== 8 || interlace !== 0 || (colorType !== 0 && colorType !== 2 && colorType !== 6)) {
         throw new Error(`PNG no soportado (profundidad ${depth}, color ${colorType}, entrelazado ${interlace})`);
       }
     } else if (type === 'IDAT') {
@@ -42,7 +43,7 @@ export function decodePng(buf: Uint8Array): DecodedPng {
     pos += 12 + len;
   }
   const raw = inflateSync(Buffer.concat(idat));
-  const bpp = colorType === 6 ? 4 : 3;
+  const bpp = colorType === 6 ? 4 : colorType === 2 ? 3 : 1;
   const stride = width * bpp;
   const out = new Uint8Array(width * height * bpp);
   for (let y = 0; y < height; y++) {
@@ -71,7 +72,8 @@ export function decodePng(buf: Uint8Array): DecodedPng {
   if (bpp === 4) return { width, height, rgba: out };
   const rgba = new Uint8Array(width * height * 4);
   for (let i = 0; i < width * height; i++) {
-    rgba.set(out.subarray(i * 3, i * 3 + 3), i * 4);
+    if (bpp === 1) rgba.fill(out[i]!, i * 4, i * 4 + 3);
+    else rgba.set(out.subarray(i * 3, i * 3 + 3), i * 4);
     rgba[i * 4 + 3] = 255;
   }
   return { width, height, rgba };

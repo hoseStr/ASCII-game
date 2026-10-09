@@ -18,13 +18,15 @@ const def: StampDef = {
   solid: true,
   shadow: 'cast',
   footprint: ['.', '#'],
+  frames: 1,
+  fps: 0,
   credits: { title: '', author: '', license: 'CC0-1.0', sourceUrl: '' },
 };
 const W = 20;
 const H = 24;
 const rgba = new Uint8Array(W * H * 4);
 for (let y = 0; y < H; y++) for (let x = 8; x < 12; x++) rgba.set([200, 180, 150, 255], (y * W + x) * 4);
-const images = new Map([['poste', stampImageFromRgba(rgba, W, H)]]);
+const images = new Map([['poste', { frames: [stampImageFromRgba(rgba, W, H)], shadow: null }]]);
 const prop: PlacedProp = { def, tx: 10, ty: 4, flip: false };
 const ox = prop.tx * TILE_COLS * PROP_SAMPLES;
 const oy = (HUD_ROWS + prop.ty * TILE_ROWS) * PROP_SAMPLES;

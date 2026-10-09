@@ -1,0 +1,17 @@
+{
+  "variant": "v2",
+  "object": "rock_moss_set_02_rock09",
+  "metersPerPixel": 0.005939567887120777,
+  "size": [
+    360,
+    250
+  ],
+  "bboxMeters": [
+    1.628928303718567,
+    1.0114696025848389,
+    0.6098546981811523
+  ],
+  "frames": 0,
+  "elevationDeg": 50.0,
+  "exposure": 1.0
+}

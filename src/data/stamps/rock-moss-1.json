@@ -1,0 +1,47 @@
+{
+  "id": "rock-moss-1",
+  "image": "rock-moss-1.png",
+  "use": "rockfill",
+  "sizeTiles": [
+    3,
+    2
+  ],
+  "cells": [
+    15,
+    6
+  ],
+  "samples": 4,
+  "solid": false,
+  "shadow": "render",
+  "footprint": [
+    "...",
+    "..."
+  ],
+  "frames": 1,
+  "fps": 0,
+  "credits": {
+    "title": "Rock Moss Set 02",
+    "author": "Kless Gyzen",
+    "license": "CC0-1.0",
+    "sourceUrl": "https://polyhaven.com/a/rock_moss_set_02"
+  },
+  "zones": [
+    "forest",
+    "forestDeep",
+    "mist",
+    "lake",
+    "garden",
+    "threshold"
+  ],
+  "shadowImage": {
+    "image": "rock-moss-1.shadow.png",
+    "offset": [
+      -2,
+      5
+    ],
+    "size": [
+      77,
+      28
+    ]
+  }
+}

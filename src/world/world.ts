@@ -75,7 +75,7 @@ export class World {
         if (nid && edgeWalkable(r.map, dir)) exits[dir] = nid;
       }
       const seed = hashString(id);
-      this.rooms.set(id, { ...r, exits, seed, rockFills: assignRockFills(r.map, this.stamps, seed) });
+      this.rooms.set(id, { ...r, exits, seed, rockFills: assignRockFills(r.map, this.stamps, seed, r.meta.zone) });
     }
   }
 

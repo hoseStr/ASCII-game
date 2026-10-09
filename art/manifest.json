@@ -29,15 +29,6 @@
       "via": "Openverse"
     },
     {
-      "id": "fern",
-      "file": "sources/fern.jpg",
-      "title": "Cinnamon fern frond",
-      "author": "jeremyosborn",
-      "sourceUrl": "https://www.flickr.com/photos/78334038@N00/52982888787",
-      "license": "PDM-1.0",
-      "via": "Openverse"
-    },
-    {
       "id": "stump-moss",
       "file": "sources/stump-moss.jpg",
       "title": "tree_stump_with_moss24",
@@ -83,22 +74,58 @@
       "via": "Openverse"
     },
     {
-      "id": "rock-moss",
-      "file": "sources/rock-moss.jpg",
-      "title": "tree_stump_with_moss23",
-      "author": "Juhele_CZ",
-      "sourceUrl": "https://www.flickr.com/photos/96541566@N06/51435082195",
+      "id": "ph-boulder_01",
+      "file": "renders/boulder_01",
+      "title": "Boulder 01",
+      "author": "Rico Cilliers",
+      "sourceUrl": "https://polyhaven.com/a/boulder_01",
       "license": "CC0-1.0",
-      "via": "Openverse"
+      "via": "Poly Haven (modelo 3D fotoescaneado, render propio)"
     },
     {
-      "id": "rock-granite",
-      "file": "sources/rock-granite.jpg",
-      "title": "Granite Boulder and Rock Varnish",
-      "author": "Joshua Tree National Park",
-      "sourceUrl": "https://www.flickr.com/photos/115357548@N08/51916592018",
-      "license": "PDM-1.0",
-      "via": "Openverse"
+      "id": "ph-namaqualand_boulder_02",
+      "file": "renders/namaqualand_boulder_02",
+      "title": "Namaqualand Boulder 02",
+      "author": "Greg Zaal, Rico Cilliers",
+      "sourceUrl": "https://polyhaven.com/a/namaqualand_boulder_02",
+      "license": "CC0-1.0",
+      "via": "Poly Haven (modelo 3D fotoescaneado, render propio)"
+    },
+    {
+      "id": "ph-namaqualand_boulder_04",
+      "file": "renders/namaqualand_boulder_04",
+      "title": "Namaqualand Boulder 04",
+      "author": "Jenelle van Heerden",
+      "sourceUrl": "https://polyhaven.com/a/namaqualand_boulder_04",
+      "license": "CC0-1.0",
+      "via": "Poly Haven (modelo 3D fotoescaneado, render propio)"
+    },
+    {
+      "id": "ph-namaqualand_boulder_05",
+      "file": "renders/namaqualand_boulder_05",
+      "title": "Namaqualand Boulder 05",
+      "author": "Jenelle van Heerden, Dario Barresi",
+      "sourceUrl": "https://polyhaven.com/a/namaqualand_boulder_05",
+      "license": "CC0-1.0",
+      "via": "Poly Haven (modelo 3D fotoescaneado, render propio)"
+    },
+    {
+      "id": "ph-rock_moss_set_02",
+      "file": "renders/rock_moss_set_02",
+      "title": "Rock Moss Set 02",
+      "author": "Kless Gyzen",
+      "sourceUrl": "https://polyhaven.com/a/rock_moss_set_02",
+      "license": "CC0-1.0",
+      "via": "Poly Haven (modelo 3D fotoescaneado, render propio)"
+    },
+    {
+      "id": "ph-fern_02",
+      "file": "renders/fern_02",
+      "title": "Fern 02",
+      "author": "Rob Tuytel, Rico Cilliers",
+      "sourceUrl": "https://polyhaven.com/a/fern_02",
+      "license": "CC0-1.0",
+      "via": "Poly Haven (modelo 3D fotoescaneado, render propio)"
     }
   ]
 }

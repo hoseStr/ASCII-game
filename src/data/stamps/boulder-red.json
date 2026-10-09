@@ -1,0 +1,43 @@
+{
+  "id": "boulder-red",
+  "image": "boulder-red.png",
+  "use": "rockfill",
+  "sizeTiles": [
+    2,
+    2
+  ],
+  "cells": [
+    10,
+    6
+  ],
+  "samples": 4,
+  "solid": false,
+  "shadow": "render",
+  "footprint": [
+    "..",
+    ".."
+  ],
+  "frames": 1,
+  "fps": 0,
+  "credits": {
+    "title": "Boulder 01",
+    "author": "Rico Cilliers",
+    "license": "CC0-1.0",
+    "sourceUrl": "https://polyhaven.com/a/boulder_01"
+  },
+  "zones": [
+    "ruins",
+    "threshold"
+  ],
+  "shadowImage": {
+    "image": "boulder-red.shadow.png",
+    "offset": [
+      0,
+      3
+    ],
+    "size": [
+      48,
+      31
+    ]
+  }
+}

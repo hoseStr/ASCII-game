@@ -18,10 +18,20 @@ export interface StampDef {
   cells: [number, number];
   samples: number;
   solid: boolean;
-  /** sombra sobre el suelo: 'cast' proyecta la silueta, 'flat' es una sombra corta (objetos planos) */
-  shadow: 'cast' | 'flat';
+  /**
+   * sombra sobre el suelo: 'cast' proyecta la silueta, 'flat' es una sombra corta
+   * (objetos planos) y 'render' usa la sombra real renderizada en el estudio
+   */
+  shadow: 'cast' | 'flat' | 'render';
   /** huella por tile, de arriba abajo: '#' sólido, '.' libre */
   footprint: string[];
+  /** fotogramas de animación (tira vertical en la imagen); 1 = estática */
+  frames: number;
+  fps: number;
+  /** sombra renderizada: imagen en escala de grises y su desplazamiento (muestras) respecto a la estampa */
+  shadowImage?: { image: string; offset: [number, number]; size: [number, number] };
+  /** relleno de rocas: zonas donde se usa (sin lista = en todas) */
+  zones?: string[];
   credits: { title: string; author: string; license: string; sourceUrl: string };
 }
 
@@ -177,27 +187,27 @@ export function rockRects(map: Tilemap): Array<{ tx0: number; ty0: number; tx1: 
   return out;
 }
 
+/** Tolerancia de proporción (log) para considerar dos variantes igual de buenas. */
+const ROCK_ASPECT_TOLERANCE = 0.35;
+
 /**
- * Cada rectángulo de roca toma una foto de roca recortada: la variante cuya
- * proporción se parece más a la del rectángulo (desempate determinista por hash).
- * La foto se estira al rectángulo; su contorno es el de la propia imagen.
+ * Cada rectángulo de roca toma una roca recortada (foto o render) de las
+ * permitidas en la zona: entre las variantes cuya proporción se parece a la del
+ * rectángulo, una elegida por hash (determinista), para que no se repitan.
+ * La imagen se estira al rectángulo; su contorno es el de la propia imagen.
  */
-export function assignRockFills(map: Tilemap, defs: Map<string, StampDef>, seed: number): RockFill[] {
-  const fills = [...defs.values()].filter((d) => d.use === 'rockfill').sort((a, b) => a.id.localeCompare(b.id));
+export function assignRockFills(map: Tilemap, defs: Map<string, StampDef>, seed: number, zone?: string): RockFill[] {
+  const all = [...defs.values()].filter((d) => d.use === 'rockfill').sort((a, b) => a.id.localeCompare(b.id));
+  const inZone = all.filter((d) => !d.zones || zone === undefined || d.zones.includes(zone));
+  const fills = inZone.length > 0 ? inZone : all;
   if (fills.length === 0) return [];
   return rockRects(map).map((r, i) => {
     const aspect = (r.tx1 - r.tx0 + 1) / (r.ty1 - r.ty0 + 1);
     let h = (seed ^ Math.imul(i + 1, 0x9e3779b1) ^ Math.imul(r.tx0 * 31 + r.ty0, 0x85ebca6b)) >>> 0;
     h = Math.imul(h ^ (h >>> 15), 0x2c1b3c6d) >>> 0;
-    let best = fills[0]!;
-    let bestScore = Infinity;
-    fills.forEach((d, k) => {
-      const score = Math.abs(Math.log(d.sizeTiles[0] / d.sizeTiles[1] / aspect)) + ((h + k) % fills.length) * 1e-3;
-      if (score < bestScore) {
-        bestScore = score;
-        best = d;
-      }
-    });
-    return { def: best, ...r };
+    const score = (d: StampDef): number => Math.abs(Math.log(d.sizeTiles[0] / d.sizeTiles[1] / aspect));
+    const best = Math.min(...fills.map(score));
+    const candidates = fills.filter((d) => score(d) <= best + ROCK_ASPECT_TOLERANCE);
+    return { def: candidates[h % candidates.length]!, ...r };
   });
 }

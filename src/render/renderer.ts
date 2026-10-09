@@ -278,6 +278,23 @@ export class Renderer {
     this.resetState = true;
   }
 
+  /**
+   * Sube a la GPU un rectángulo (en muestras) de la capa de piezas: lo usan las
+   * piezas animadas para no resubir la capa entera.
+   */
+  updatePropRegion(rgb: Uint8Array, x: number, y: number, w: number, h: number): void {
+    const gl = this.gl;
+    if (gl.isContextLost() || w <= 0 || h <= 0) return;
+    gl.bindTexture(gl.TEXTURE_2D, this.propRgbTex);
+    gl.pixelStorei(gl.UNPACK_ROW_LENGTH, PROP_W);
+    gl.pixelStorei(gl.UNPACK_SKIP_PIXELS, x);
+    gl.pixelStorei(gl.UNPACK_SKIP_ROWS, y);
+    gl.texSubImage2D(gl.TEXTURE_2D, 0, x, y, w, h, gl.RGBA_INTEGER, gl.UNSIGNED_BYTE, rgb);
+    gl.pixelStorei(gl.UNPACK_ROW_LENGTH, 0);
+    gl.pixelStorei(gl.UNPACK_SKIP_PIXELS, 0);
+    gl.pixelStorei(gl.UNPACK_SKIP_ROWS, 0);
+  }
+
   /** Guarda el estado de celda actual como "sala vieja" de una transición. */
   captureSnapshot(): void {
     const gl = this.gl;

@@ -21,24 +21,60 @@ export function stampImageFromRgba(rgba: Uint8Array | Uint8ClampedArray, w: numb
   return { w, h, data: Uint8Array.from(rgba) };
 }
 
-export async function loadStampImages(defs: Map<string, StampDef>): Promise<Map<string, StampImage>> {
-  const out = new Map<string, StampImage>();
+/** Mapa de grises de 8 bits (sombras renderizadas). */
+export interface GrayImage {
+  w: number;
+  h: number;
+  data: Uint8Array;
+}
+
+/** Una estampa lista para usar: sus fotogramas y, si la tiene, su sombra renderizada. */
+export interface StampAsset {
+  frames: StampImage[];
+  shadow: GrayImage | null;
+}
+
+/** Separa una tira vertical de fotogramas en imágenes (vistas sobre los mismos bytes). */
+export function splitFrames(strip: StampImage, frames: number): StampImage[] {
+  const fh = strip.h / frames;
+  const size = strip.w * fh * 4;
+  return Array.from({ length: frames }, (_, k) => ({ w: strip.w, h: fh, data: strip.data.subarray(k * size, (k + 1) * size) }));
+}
+
+async function decodeImage(url: string): Promise<{ w: number; h: number; rgba: Uint8ClampedArray }> {
+  const blob = await (await fetch(url)).blob();
+  const bmp = await createImageBitmap(blob, { premultiplyAlpha: 'none', colorSpaceConversion: 'none' });
+  const canvas = new OffscreenCanvas(bmp.width, bmp.height);
+  const ctx = canvas.getContext('2d', { willReadFrequently: true })!;
+  ctx.drawImage(bmp, 0, 0);
+  const out = { w: bmp.width, h: bmp.height, rgba: ctx.getImageData(0, 0, bmp.width, bmp.height).data };
+  bmp.close();
+  return out;
+}
+
+export async function loadStampImages(defs: Map<string, StampDef>): Promise<Map<string, StampAsset>> {
+  const out = new Map<string, StampAsset>();
   await Promise.all(
     [...defs.values()].map(async (def) => {
       const url = urls[`../assets/stamps/${def.image}`];
       if (!url) throw new Error(`Estampa '${def.id}': falta la imagen ${def.image}`);
-      const blob = await (await fetch(url)).blob();
-      const bmp = await createImageBitmap(blob, { premultiplyAlpha: 'none', colorSpaceConversion: 'none' });
+      const img = await decodeImage(url);
+      const frames = Math.max(1, def.frames || 1);
       const w = def.cells[0] * def.samples;
-      const h = def.cells[1] * def.samples;
-      if (bmp.width !== w || bmp.height !== h) {
-        throw new Error(`Estampa '${def.id}': la imagen mide ${bmp.width}×${bmp.height}, se esperaba ${w}×${h}`);
+      const h = def.cells[1] * def.samples * frames;
+      if (img.w !== w || img.h !== h) {
+        throw new Error(`Estampa '${def.id}': la imagen mide ${img.w}×${img.h}, se esperaba ${w}×${h}`);
       }
-      const canvas = new OffscreenCanvas(w, h);
-      const ctx = canvas.getContext('2d', { willReadFrequently: true })!;
-      ctx.drawImage(bmp, 0, 0);
-      bmp.close();
-      out.set(def.id, stampImageFromRgba(ctx.getImageData(0, 0, w, h).data, w, h));
+      let shadow: GrayImage | null = null;
+      if (def.shadowImage) {
+        const surl = urls[`../assets/stamps/${def.shadowImage.image}`];
+        if (!surl) throw new Error(`Estampa '${def.id}': falta la sombra ${def.shadowImage.image}`);
+        const sh = await decodeImage(surl);
+        const data = new Uint8Array(sh.w * sh.h);
+        for (let i = 0; i < data.length; i++) data[i] = sh.rgba[i * 4]!;
+        shadow = { w: sh.w, h: sh.h, data };
+      }
+      out.set(def.id, { frames: splitFrames(stampImageFromRgba(img.rgba, img.w, img.h), frames), shadow });
     }),
   );
   return out;

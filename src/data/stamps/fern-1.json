@@ -1,0 +1,40 @@
+{
+  "id": "fern-1",
+  "image": "fern-1.png",
+  "use": "prop",
+  "sizeTiles": [
+    4,
+    3
+  ],
+  "cells": [
+    20,
+    9
+  ],
+  "samples": 4,
+  "solid": false,
+  "shadow": "render",
+  "footprint": [
+    "....",
+    "....",
+    "...."
+  ],
+  "frames": 12,
+  "fps": 6,
+  "credits": {
+    "title": "Fern 02",
+    "author": "Rob Tuytel, Rico Cilliers",
+    "license": "CC0-1.0",
+    "sourceUrl": "https://polyhaven.com/a/fern_02"
+  },
+  "shadowImage": {
+    "image": "fern-1.shadow.png",
+    "offset": [
+      0,
+      -6
+    ],
+    "size": [
+      100,
+      47
+    ]
+  }
+}

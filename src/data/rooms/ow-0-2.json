@@ -13,10 +13,17 @@
       ]
     },
     {
-      "stamp": "fern",
+      "stamp": "fern-1",
       "tile": [
-        8,
-        2
+        6,
+        5
+      ]
+    },
+    {
+      "stamp": "fern-3",
+      "tile": [
+        13,
+        9
       ]
     }
   ]

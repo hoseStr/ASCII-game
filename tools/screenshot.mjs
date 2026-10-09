@@ -40,7 +40,7 @@ async function openGame(viewport) {
     if (m.type() === 'error' || m.type() === 'warning') errors.push(`${m.type()}: ${m.text()}`);
   });
   page.on('pageerror', (e) => errors.push(`pageerror: ${e.message}`));
-  await page.goto(base);
+  await page.goto(base, { timeout: 120000 }); // el primer arranque en frío de Vite puede pasar de 30 s
   try {
     await page.waitForFunction(() => document.body.dataset.ready === '1', null, { timeout: 20000 });
   } catch (e) {

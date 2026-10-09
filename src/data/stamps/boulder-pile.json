@@ -1,0 +1,42 @@
+{
+  "id": "boulder-pile",
+  "image": "boulder-pile.png",
+  "use": "rockfill",
+  "sizeTiles": [
+    2,
+    1
+  ],
+  "cells": [
+    10,
+    3
+  ],
+  "samples": 4,
+  "solid": false,
+  "shadow": "render",
+  "footprint": [
+    ".."
+  ],
+  "frames": 1,
+  "fps": 0,
+  "credits": {
+    "title": "Namaqualand Boulder 02",
+    "author": "Greg Zaal, Rico Cilliers",
+    "license": "CC0-1.0",
+    "sourceUrl": "https://polyhaven.com/a/namaqualand_boulder_02"
+  },
+  "zones": [
+    "ruins",
+    "threshold"
+  ],
+  "shadowImage": {
+    "image": "boulder-pile.shadow.png",
+    "offset": [
+      -2,
+      2
+    ],
+    "size": [
+      45,
+      13
+    ]
+  }
+}

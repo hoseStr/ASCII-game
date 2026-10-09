@@ -44,14 +44,56 @@ describe('estampas: licencias y archivos', () => {
     }
   });
 
-  it('PNG del tamaño declarado y huella coherente con sizeTiles', () => {
+  it('PNG del tamaño declarado (tira de fotogramas) y huella coherente con sizeTiles', () => {
     for (const def of defs.values()) {
       const png = decodePng(readFileSync(file(`src/assets/stamps/${def.image}`)));
+      expect(def.frames, def.id).toBeGreaterThanOrEqual(1);
+      expect(def.fps > 0, def.id).toBe(def.frames > 1);
       expect(png.width, def.id).toBe(def.cells[0] * def.samples);
-      expect(png.height, def.id).toBe(def.cells[1] * def.samples);
+      expect(png.height, def.id).toBe(def.cells[1] * def.samples * def.frames);
       expect(def.footprint).toHaveLength(def.sizeTiles[1]);
       for (const row of def.footprint) expect(row).toHaveLength(def.sizeTiles[0]);
       if (!def.solid) expect(def.footprint.join('')).not.toContain('#');
+    }
+  });
+
+  it('las estampas renderizadas traen su sombra (escala de grises, del tamaño declarado)', () => {
+    let rendered = 0;
+    for (const def of defs.values()) {
+      if (def.shadow !== 'render') continue;
+      rendered++;
+      expect(def.shadowImage, def.id).toBeDefined();
+      const png = decodePng(readFileSync(file(`src/assets/stamps/${def.shadowImage!.image}`)));
+      expect([png.width, png.height], def.id).toEqual(def.shadowImage!.size);
+      let dark = 0;
+      for (let i = 0; i < png.width * png.height; i++) dark = Math.max(dark, png.rgba[i * 4]!);
+      expect(dark, def.id).toBeGreaterThan(64); // hay sombra de verdad
+    }
+    expect(rendered).toBeGreaterThan(0);
+  });
+
+  it('fotogramas: el bucle se mueve y la silueta no salta', () => {
+    for (const def of defs.values()) {
+      if (def.frames <= 1) continue;
+      const png = decodePng(readFileSync(file(`src/assets/stamps/${def.image}`)));
+      const size = png.width * (png.height / def.frames) * 4;
+      const frame = (k: number): Uint8Array => png.rgba.subarray(k * size, (k + 1) * size);
+      let moved = 0;
+      let alpha0 = 0;
+      for (let i = 3; i < size; i += 4) alpha0 += frame(0)[i]!;
+      for (let k = 1; k < def.frames; k++) {
+        const f = frame(k);
+        let diff = 0;
+        let alpha = 0;
+        for (let i = 0; i < size; i++) {
+          diff += Math.abs(f[i]! - frame(0)[i]!);
+          if (i % 4 === 3) alpha += f[i]!;
+        }
+        if (diff > 0) moved++;
+        expect(Math.abs(alpha - alpha0) / alpha0, `${def.id} f${k}`).toBeLessThan(0.15);
+      }
+      // en un vaivén senoidal el fotograma de medio ciclo puede coincidir con el 0
+      expect(moved, def.id).toBeGreaterThanOrEqual(def.frames - 2);
     }
   });
 });
@@ -62,7 +104,9 @@ describe('estampas: fidelidad al algoritmo del repo', () => {
   // tiene que dar exactamente el mismo texto a partir del mismo PNG.
   for (const def of defs.values()) {
     it(`${def.id}: convertColor reproduce la vista previa del repo al 100 %`, () => {
-      const png = decodePng(readFileSync(file(`src/assets/stamps/${def.image}`)));
+      const strip = decodePng(readFileSync(file(`src/assets/stamps/${def.image}`)));
+      // la vista previa es la del fotograma 0 (las primeras filas de la tira)
+      const png = { width: strip.width, height: strip.height / def.frames, rgba: strip.rgba };
       const rgb = new Uint8Array(png.width * png.height * 3);
       for (let i = 0; i < png.width * png.height; i++) {
         const a = png.rgba[i * 4 + 3]!;
@@ -88,6 +132,8 @@ const testDef = (over: Partial<StampDef> = {}): StampDef => ({
   solid: true,
   shadow: 'cast',
   footprint: ['...', '##.'],
+  frames: 1,
+  fps: 0,
   credits: { title: '', author: '', license: 'CC0-1.0', sourceUrl: '' },
   ...over,
 });
@@ -148,6 +194,20 @@ describe('rocas con textura fotográfica', () => {
     const b = assignRockFills(map, defs, 1234);
     expect(a.map((f) => f.def.id)).toEqual(b.map((f) => f.def.id));
     for (const f of a) expect(f.def.use).toBe('rockfill');
+  });
+
+  it('cada zona usa sus rocas, con variedad entre rectángulos parecidos', () => {
+    // muchas rocas sueltas de 1×1: todas las variantes compiten igual
+    const rows = Array.from({ length: 16 }, (_, y) =>
+      Array.from({ length: 32 }, (_, x) => (x % 2 === 0 && y % 2 === 0 && y < 14 ? '#' : ',')).join(''),
+    );
+    const map = parseRoomMap(rows.join('\n'));
+    for (const zone of ['ruins', 'forest']) {
+      const fills = assignRockFills(map, defs, 99, zone);
+      expect(fills.length).toBeGreaterThan(10);
+      for (const f of fills) expect(!f.def.zones || f.def.zones.includes(zone), `${zone}: ${f.def.id}`).toBe(true);
+      expect(new Set(fills.map((f) => f.def.id)).size, zone).toBeGreaterThan(1);
+    }
   });
 });
 

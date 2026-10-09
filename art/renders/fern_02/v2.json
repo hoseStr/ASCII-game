@@ -1,0 +1,17 @@
+{
+  "variant": "v2",
+  "object": "fern_02_c",
+  "metersPerPixel": 0.0038744439800580347,
+  "size": [
+    300,
+    270
+  ],
+  "bboxMeters": [
+    0.8743258118629456,
+    0.7652256488800049,
+    0.3490203619003296
+  ],
+  "frames": 12,
+  "elevationDeg": 50.0,
+  "exposure": 1.2
+}
