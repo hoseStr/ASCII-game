@@ -270,7 +270,8 @@ def main():
             "elevationDeg": ELEVATION_DEG,
             "exposure": args.exposure,
         }
-        with open(os.path.join(args.out, f"{name}.json"), "w", encoding="utf-8") as f:
+        with open(os.path.join(args.out, f"{name}.json"), "w", encoding="utf-8", newline="
+") as f:
             json.dump(meta, f, indent=2)
         summary.append(meta)
         root.location -= offset
