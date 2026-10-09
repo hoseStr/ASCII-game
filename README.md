@@ -96,115 +96,115 @@ Los sprites son texto: `src/data/sprites/princess.txt` y `princess.json`.
 - La vista izquierda se genera espejando la derecha.
 - Los glifos de entidades salen de un conjunto reservado que el decorado nunca usa. Un test lo verifica.
 
-## Piezas de escenario: fotos y modelos 3D convertidos a ASCII
+## Piezas de escenario: modelos 3D convertidos a ASCII
 
 El repositorio original convierte fotos y video en texto, y el juego hace lo mismo con su escenario.
 
-- **Qué son.** Dos orígenes, todos en dominio público o CC0:
-  - **Fotos reales:** rocas con musgo, amanitas, tocones, troncos, nenúfares, columnas antiguas y azaleas.
-  - **Modelos 3D fotoescaneados** de [Poly Haven](https://polyhaven.com), fotografiados en un estudio de render propio con la misma cámara y la misma luz que el juego: helechos y todas las rocas `#`. Ver [Estudio de render](#estudio-de-render-modelos-3d).
-- **Cómo se pintan.** Se convierten a ASCII **tal cual**, exactamente como hacía el repo con sus imágenes. Cada celda toma el color real de la foto (el promedio de su bloque de píxeles) y el glifo sale de `min(floor(media·N/255), N−1)` en la rampa de 70 caracteres. No llevan tinte de zona, luz, niebla, respiración, contornos, bloom ni post-proceso: la pieza se ve como la foto.
-- **Bordes.** El único borde de una pieza es el contorno de su imagen recortada. No se añaden líneas, marcos, sombras ni cajas de fondo: detrás de los glifos de la pieza se ve el mismo fondo que en el resto de la sala.
+- **Qué son.** Rocas, helechos, plantas tropicales, flores, plantas flotantes del lago, un busto de mármol y una estatua gótica.
+  - Todas son **modelos 3D fotoescaneados** de [Poly Haven](https://polyhaven.com) (CC0).
+  - Se fotografían en un estudio de render propio, con la misma cámara y la misma luz que el juego. Ver [Estudio de render](#estudio-de-render).
+- **Cómo se pintan.** Cada celda toma el **color real** de la imagen y un glifo de la **rampa de 70 caracteres del repo**:
+  - **Zonas lisas** (celda entera dentro de la silueta, sin detalle): el glifo del repo tal cual, `min(floor(L·N/255), N−1)`.
+  - **Bordes y detalles:** el glifo de la misma rampa cuya **forma** se parece más a la celda. El borde de arriba de una roca sale con `_`, el de abajo con `"`, un tallo con `|` y un brillo pequeño con `,`.
+    - La forma se compara en una rejilla de 3×5 regiones: la tinta de cada región (brillo × alfa) frente a la cobertura de cada glifo.
+    - La cobertura se mide en la fuente del juego con la misma disposición que el atlas (`src/data/glyphShapes.json`).
+  - **Color mínimo:** el color nunca baja de un brillo mínimo (conservando el tono), así la cara en sombra no desaparece en la noche.
+  - **Fondo de la silueta:** dentro de la silueta, el fondo de la celda toma un **velo tenue del propio color** de la pieza, así se lee como una forma y no como letras sueltas. Se desactiva con la tecla 8 del panel F3.
+  - Sin tinte de zona, luz, niebla, respiración, contornos, bloom ni post-proceso.
+- **Revelado.** Antes de convertirla, `make_stamps.py` revela la imagen como se revelaría una foto, con los mismos ajustes en todos los fotogramas:
+  - niveles automáticos;
+  - contraste local de la forma, a unas 1 celda;
+  - sombras algo más abiertas;
+  - un poco más de saturación.
+- **Bordes.** El único borde de una pieza es el contorno de su imagen: no se añaden líneas, marcos ni cajas.
 - **Rocas `#`.** Se descomponen en rectángulos de hasta 3×2 tiles. Cada uno muestra una roca renderizada **recortada**, estirada a su rectángulo y convertida igual.
-  - Hay 11 variantes. Cada zona usa las suyas: rocas con musgo en el bosque, la niebla y el lago, y peñas cálidas en las ruinas. El umbral mezcla ambas.
+  - Hay 14 variantes. Cada zona usa las suyas: rocas con musgo en el bosque, la niebla y el lago, y peñas cálidas en las ruinas. El umbral mezcla ambas.
   - Entre las variantes de proporción parecida se elige por hash, así que las rocas vecinas no se repiten.
   - La colisión sigue siendo por tile, pero en el render esos tiles ya no se pintan como roca procedural, sin el contorno ni el recorte por tile de las demás rocas.
 - **Excepción al brief.** El brief original decía "no uses imágenes externas"; esta mejora lo cambia a propósito.
-  - Solo se aceptan fotos CC0 o de dominio público, con la licencia verificada en la página de origen.
-  - Cada foto queda registrada en `art/manifest.json` y acreditada en THIRD_PARTY_NOTICES.
+  - Solo se aceptan modelos CC0, con la licencia verificada en su página.
+  - Cada modelo queda registrado en `art/manifest.json` y acreditado en THIRD_PARTY_NOTICES.
 
 En el juego:
 
 - **Colocación.** Las piezas se colocan desde el JSON de la sala, en la clave `props`.
-- **Colisión.** Las piezas sólidas bloquean según su **huella**, que se calcula por tile a partir del alfa de la foto. Las que se ven altas (columna, setas, tocón) solo bloquean por la base.
-- **Piezas decorativas.** Los helechos y los nenúfares no bloquean.
-- **Sombras.** Cada objeto (piezas y rocas) deja su sombra sobre el suelo.
-  - Las piezas renderizadas traen su **sombra real**, calculada por el render con un plano *shadow catcher*.
-  - Las fotos proyectan su silueta.
-  - La luz viene de arriba a la izquierda, como en los árboles, así que la sombra cae hacia abajo a la derecha. El sol del estudio está en esa misma dirección.
-  - Es más oscura junto a la base, se aclara hacia la punta y tiene penumbra.
-  - Los nenúfares, que son planos, dejan solo una sombra corta sobre el agua.
-  - La sombra oscurece el suelo (glifos y fondo de celda) y nunca la foto.
-- **Animación.** Los helechos se mecen con el viento: 12 fotogramas renderizados en bucle, con la base fija y una ráfaga que recorre la planta de izquierda a derecha. La azalea se mece y los nenúfares flotan; esas dos animaciones son 2D, deformando la foto.
+- **Colisión.** Las piezas sólidas bloquean según su **huella**, que se calcula por tile a partir del alfa de la imagen.
+  - Las rocas bloquean por su silueta.
+  - Las plantas, el busto y la estatua solo bloquean por la base.
+- **Piezas decorativas.** Los helechos, las gazanias y las plantas del lago no bloquean.
+- **Sombras.** Cada objeto (piezas y rocas) deja su **sombra real**, calculada por el render con un plano *shadow catcher*.
+  - La luz viene de arriba a la izquierda, como en los árboles, así que la sombra cae hacia abajo a la derecha.
+  - Una pieza en espejo proyecta su silueta, porque la sombra del render caería al lado contrario.
+  - La sombra oscurece el suelo (glifos y fondo de celda) y nunca la pieza.
+- **Animación.** Las plantas se mecen con el viento: 12 fotogramas renderizados en bucle, con la base fija y una ráfaga que recorre la planta de izquierda a derecha.
   - Cada fotograma se convierte con el mismo algoritmo que una imagen fija.
-  - Cada pieza lleva una fase según su posición, así que dos helechos iguales no se mueven al unísono.
-  - Al cambiar de fotograma solo se recompone y se sube a la GPU el rectángulo de esa pieza, sin allocations.
+  - Cada pieza lleva una fase según su posición, así que dos plantas iguales no se mueven al unísono.
+  - Al cambiar de fotograma solo se recomponen, se reconvierten y se suben a la GPU las celdas de esa pieza, sin allocations.
   - Con "efectos reducidos" las piezas quedan quietas en el fotograma 0.
-- **Profundidad.** Si la princesa está más al norte que la base de un objeto, el objeto la tapa: puede pasar por detrás de una columna o de las amanitas y asomar por un lado. Cada celda de entidad lleva la fila de sus pies en los flags, y cada celda de pieza, la fila de su base. Una sombra suave bajo los pies asienta a la princesa en el suelo.
-- **Fidelidad comprobada.** `npm run verify:stamps` lee de la GPU el glifo y el color de todas las celdas cubiertas por piezas (fotos, renders y rocas) en las 9 salas y los compara con el algoritmo del repo calculado en CPU.
-  - Lo hace en tres instantes por sala, así que también cubre los fotogramas de las piezas animadas.
-  - Tienen que coincidir al byte, y coinciden.
-  - Todo el cálculo es entero (bytes de la imagen), así que no hay diferencias de redondeo entre CPU y GPU.
-- **Depuración.** La página `/debug/stamps.html` muestra cada estampa: la imagen procesada, la pieza tal como se ve en el juego (las animadas en bucle) y la conversión literal del repo en texto.
+- **Profundidad.** Si la princesa está más al norte que la base de un objeto, el objeto la tapa: puede pasar por detrás de la estatua o de una planta y asomar por un lado. Cada celda de entidad lleva la fila de sus pies en los flags, y cada celda de pieza, la fila de su base. Una sombra suave bajo los pies asienta a la princesa en el suelo.
+- **Comprobado.** `npm run verify:stamps` hace dos comprobaciones:
+  - que la tabla de formas coincide con los glifos del atlas real;
+  - que el glifo y el color que dibuja la GPU en cada celda de pieza son, al byte, los que calculó la CPU, en las 9 salas y en tres instantes por sala (así cubre también los fotogramas animados).
+- **Depuración.** La página `/debug/stamps.html` muestra cada estampa:
+  - la imagen revelada;
+  - la pieza tal como se ve en el juego (las animadas, en bucle);
+  - la conversión literal del repo, en texto, como referencia.
 
-### Estudio de render (modelos 3D)
+### Estudio de render
 
 Un modelo fotoescaneado tiene textura de foto, pero además da control total sobre el ángulo, la luz, la escala, la sombra y el movimiento.
 
 `tools/render_studio.py` se ejecuta **dentro de Blender** (4.x, Cycles) y fotografía el modelo como el juego mira su mundo:
 
 - **Cámara.** Ortográfica, en 3/4 (50° sobre el horizonte), mirando al norte.
-- **Luz.** Sol desde arriba a la izquierda de la pantalla, con cielo de relleno y exposición de día.
+- **Luz.** Sol desde arriba a la izquierda de la pantalla, con cielo de relleno y exposición de día. Lleva además dos luces sin sombra, para que la forma se lea en ASCII sin cambiar la sombra del suelo:
+  - **relleno** (`--fill`), de frente, que abre la cara en sombra;
+  - **contorno** (`--rim`), desde atrás, que perfila la silueta.
 - **Escala.** Real: los modelos vienen en metros, y 1 unidad del juego son 0,4 m.
 
-Por cada variante del modelo (un conjunto de rocas trae varias) genera:
+Por cada variante del modelo (un conjunto de rocas trae varias; `--only 1,2` elige cuáles) genera:
 
 - **Objeto.** El objeto con alfa limpio.
 - **Sombra.** Una pasada con *shadow catcher*: el objeto invisible para la cámara pero proyectando su sombra.
 - **Viento.** Con `--frames`, un bucle de viento: cada vértice se desplaza según su altura, y la base no se mueve.
 
-```bash
-python -P tools/polyhaven.py fern_02 rock_moss_set_02      # descarga glTF 1k a .cache/models y registra autor/licencia en art/manifest.json
-blender -b --factory-startup -P tools/render_studio.py -- \
-    --model .cache/models/fern_02/fern_02_1k.gltf --out art/renders/fern_02 \
-    --res 300 --samples 32 --exposure 1.2 --frames 12 --wind 0.25 --wave 0.5
-```
+### Cómo añadir un modelo al escenario
 
-Después, en `art/stamps.json`, la estampa usa `"mode": "render"` con su `variant` (`v0`, `v1`…).
-
-- **`sizeTiles`.** Puede ser `"auto"`:
-  - para una pieza, la escala real por `scale`;
-  - para una roca, el rectángulo de hasta 3×2 tiles con la proporción más parecida.
-- **`zones`.** Limita una roca a ciertas zonas.
-- **`fps`.** Fija la velocidad del bucle.
-
-`make_stamps.py` encaja todos los fotogramas y la sombra con la misma transformación y escribe:
-
-- los fotogramas como una tira vertical en `<id>.png`;
-- la sombra en `<id>.shadow.png`.
-
-Los renders (`art/renders/`) se versionan, así que regenerar las estampas no requiere Blender.
-
-### Cómo añadir una imagen al escenario
-
-1. **Busca** una foto CC0 o de dominio público. Lo más fácil es un sujeto que se separe bien del fondo.
+1. **Busca** un modelo en [polyhaven.com/models](https://polyhaven.com/models) y descárgalo. Todos son CC0. El script deja el glTF 1k en `.cache/models` y registra autor y licencia en `art/manifest.json`.
    ```bash
-   python -P tools/find_images.py "mossy boulder"            # Openverse, solo cc0/pdm
-   python -P tools/find_images.py "fern" --source commons    # Wikimedia Commons
+   python -P tools/polyhaven.py calathea_orbifolia_01
    ```
-2. **Verifica la licencia** en la página de la foto. Guárdala en `art/sources/<id>.jpg` (1024 px como máximo) y añádela a `art/manifest.json` con su título, autor, URL y licencia (`CC0-1.0` o `PDM-1.0`).
+2. **Fotografíalo:**
+   ```bash
+   blender -b --factory-startup -P tools/render_studio.py -- \
+       --model .cache/models/calathea_orbifolia_01/calathea_orbifolia_01_1k.gltf --out art/renders/calathea_orbifolia_01 \
+       --res 300 --samples 32 --exposure 1.0 --fill 1.2 --rim 2.5 --only 0,1 --frames 12 --wind 0.18 --wave 0.5
+   ```
 3. **Define la estampa** en `art/stamps.json`:
-   - `rect`: el sujeto, en coordenadas de 0 a 1;
-   - `mode`: `grabcut` o `key-dark` para fondo negro (`render` para modelos 3D, ver arriba);
-   - `use`: `prop` (pieza colocada a mano) o `rockfill` (variante de foto para las rocas `#`);
-   - `sizeTiles`, `solid`, `collision` (`alpha` o `base`);
-   - opcionales: `fg` y `bg`, rectángulos de sujeto o fondo seguros que guían a GrabCut, y `animate` (`{ "type": "sway" | "bob", "frames": 12, "amp": … }`) para mecer o hacer flotar la foto.
+   - `source`, el id del manifiesto (`ph-<modelo>`), y `variant` (`v0`, `v1`…);
+   - `use`: `prop` (pieza colocada a mano) o `rockfill` (variante para las rocas `#`);
+   - `sizeTiles`: `[ancho, alto]` o `"auto"`. Para una pieza, `"auto"` usa la escala real multiplicada por `scale`; para una roca, el rectángulo de hasta 3×2 tiles con la proporción más parecida;
+   - `solid` y `collision` (`alpha` o `base`);
+   - opcionales: `fps` (velocidad del bucle) y `zones` (zonas de una roca).
 4. **Procésala:**
    ```bash
    python -m venv .cache/venv-tools && .cache/venv-tools/Scripts/python -m pip install -r tools/requirements.txt   # una vez
    .cache/venv-tools/Scripts/python -P tools/make_stamps.py
    ```
    El script genera:
-   - `src/assets/stamps/<id>.png`, una tira vertical si la estampa está animada, más `<id>.shadow.png` para los renders;
-   - `src/data/stamps/<id>.json`, con la huella y los créditos;
+   - `src/assets/stamps/<id>.png`, revelada, a 6×10 muestras por celda (una tira vertical si está animada);
+   - `<id>.shadow.png`, la sombra en la rejilla de sombras (4×4 por celda);
+   - `src/data/stamps/<id>.json`, con la huella, la sombra y los créditos;
    - la vista previa literal del repo;
-   - la sección de créditos;
-   - una hoja de revisión en `shots/stamps-contact.png`.
+   - la tabla de formas de glifo;
+   - la sección de créditos.
+
+   Los renders de `art/renders/` se versionan, así que regenerar las estampas no requiere Blender.
 5. **Colócala** en una sala: `"props": [{ "stamp": "<id>", "tile": [x, y], "flip": false }]`, con `tile` como esquina superior izquierda.
 6. **Valida** con `npm test` y `npm run verify:stamps`. Los tests comprueban:
-   - licencias, tamaños, huellas, fotogramas y sombras renderizadas;
+   - licencias, tamaños, huellas, fotogramas y sombras;
    - que el port de TypeScript reproduce al 100 % la vista previa literal del repo;
-   - que cada celda opaca usa exactamente la fórmula del repo (media del bloque) y el color real;
+   - la conversión: el glifo del repo en zonas lisas, la forma en los bordes, el color real y el color mínimo;
    - que la huella cae sobre suelo;
    - que ninguna sala queda bloqueada.
 
@@ -235,7 +235,7 @@ Los renders (`art/renders/`) se versionan, así que regenerar las estampas no re
 
 ### Reparto entre capas
 
-- **Piezas de escenario:** sus bytes reales se componen en CPU una vez por sala, en una capa de 4 muestras por celda (textura `RGBA8UI`). En la conversión (P2), esas celdas aplican el algoritmo del repo directamente sobre la foto y saltan la capa pictórica, los contornos y la histéresis. También quedan fuera del bloom, la viñeta, la aberración y el grano.
+- **Piezas de escenario:** se componen en CPU una vez por sala, a 6×10 muestras por celda, y se convierten a ASCII también en CPU (`stampConvert.ts`). La GPU recibe por celda el color y la posición en la rampa (`RGBA8UI`) y la fila de base y la cobertura (`RG8UI`). En la composición (P2), esas celdas saltan la capa pictórica, los contornos y la histéresis. También quedan fuera del bloom, la viñeta, la aberración y el grano.
 
 - **Capa pictórica:** todo el terreno natural, incluidos los obstáculos (rocas, árboles, agua, vacío). Así recibe la luz dinámica, y la Linterna Lunar de la Fase 4 podrá revelar zonas oscuras.
 - **Capa semántica:** estructuras construidas (puentes), entidades y HUD.
@@ -285,11 +285,12 @@ Mediciones en una **Intel UHD Graphics integrada** (Alder Lake, D3D11) con Micro
 
 - **Fotogramas:** 60 fps estables en las 9 salas y durante las transiciones. La variación del total sigue a la frecuencia dinámica de la GPU integrada.
 - **1366×768:** unos 4,1 ms de GPU.
-- **Arranque:** unos 200–250 ms, incluida la decodificación de las 22 estampas (cinco de ellas con 12 fotogramas). Los 10 programas compilan en unos 25 ms.
+- **Arranque:** unos 340–370 ms, incluida la decodificación de las 31 estampas (12 de ellas con 12 fotogramas). Los 10 programas compilan en unos 25 ms.
 - **Piezas de escenario:**
-  - La composición de la capa al entrar en una sala, sombras incluidas, tarda 1,7–4,6 ms en caliente; ocurre solo al cambiar de sala.
-  - Las piezas animadas cuestan menos de 0,02 ms por fotograma en CPU: cambio de fotograma, recomposición de su rectángulo y subida de esa región a la GPU.
-  - Con piezas, sombras y animación, la GPU sigue en 5,7–7,1 ms por fotograma a 1080p.
+  - La composición de la capa al entrar en una sala, con sombras y conversión a ASCII, tarda 1,5–3 ms en caliente; ocurre solo al cambiar de sala.
+  - La primera visita a una sala tarda 2–13 ms, porque estira sus rocas a cada rectángulo. Después quedan en caché.
+  - Cada cambio de fotograma de una pieza animada cuesta 0,1–0,3 ms en CPU: recomposición, conversión de sus celdas y subida de esa región a la GPU. Repartido, son menos de 0,1 ms por fotograma.
+  - Con piezas, sombras y animación, la GPU sigue en 5,8–7,3 ms por fotograma a 1080p.
 - **CPU:** 0,05 ms de simulación y 0,3–0,6 ms de preparación del render por fotograma.
 - **Cero allocations en el bucle caliente:** el heap JS crece 0 bytes/s, medido por `npm run shots`.
 
@@ -307,9 +308,9 @@ src/
   ui/                    HUD, overlay F3
   data/                  salas (.txt + .json), mundo, leyenda, paletas, sprites, estampas (generadas)
   assets/stamps/         estampas procesadas (PNG de 4 muestras por celda)
-art/                     fotos originales y renders del estudio (CC0 / dominio público), manifiesto de licencias y definición de estampas
+art/                     renders del estudio (modelos CC0), manifiesto de licencias y definición de estampas
 tests/                   fidelidad dorada, fuente, legibilidad, núcleo, layout, mundo, colisión, sistemas, estampas
-tools/                   make_golden.py (fixtures), make_stamps.py y find_images.py (estampas), polyhaven.py y render_studio.py (estudio de render), screenshot.mjs (capturas), verify_stamps.mjs
+tools/                   make_golden.py (fixtures), polyhaven.py y render_studio.py (estudio de render), make_stamps.py (estampas), screenshot.mjs (capturas), verify_stamps.mjs
 ```
 
 ## Licencias

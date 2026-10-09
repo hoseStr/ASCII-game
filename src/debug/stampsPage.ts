@@ -1,11 +1,12 @@
 /**
- * Página de depuración de las estampas (piezas de escenario hechas con fotos y
- * con renders de modelos 3D): imagen procesada, conversión literal del repo
- * (texto) y la pieza tal como se ve en el juego (conversión pura con los colores
- * reales; las animadas se reproducen en bucle), más la licencia.
+ * Página de depuración de las estampas (piezas de escenario hechas con renders de
+ * modelos 3D): imagen revelada, la pieza tal como se ve en el juego (conversión de
+ * stampConvert.ts, colores reales y fondo de la silueta; las animadas en bucle),
+ * la conversión literal del repo (texto) y la licencia.
  */
 import { FONT_FAMILY } from '../render/atlas';
 import { loadGameFont } from '../render/fontLoader';
+import { PROP_FILL } from '../render/stampConvert';
 import { convertStamp, loadStampImages, type StampImage } from '../render/stamps';
 import { loadZonePalette } from '../render/zonePalette';
 import { loadStampDefs } from '../world/props';
@@ -47,9 +48,9 @@ function pngCanvas(img: StampImage, scale: number): HTMLCanvasElement {
   return c;
 }
 
-/** La pieza como en el juego: celdas 3:5, glifo de la rampa del repo y color real del bloque. */
-function gameCanvas(img: StampImage, samples: number, paper: [number, number, number]): HTMLCanvasElement {
-  const cells = convertStamp(img, samples, 'light');
+/** La pieza como en el juego: celdas 3:5, glifo por forma/tono, color real y fondo de la silueta. */
+function gameCanvas(img: StampImage, paper: [number, number, number]): HTMLCanvasElement {
+  const cells = convertStamp(img);
   const cw = 12;
   const ch = 20;
   const c = document.createElement('canvas');
@@ -63,6 +64,9 @@ function gameCanvas(img: StampImage, samples: number, paper: [number, number, nu
   cells.forEach((row, y) =>
     row.forEach((cell, x) => {
       if (!cell.char) return;
+      const f = PROP_FILL * Math.min(1, cell.cov * 1.5);
+      ctx.fillStyle = `rgb(${[0, 1, 2].map((i) => Math.round((paper[i]! * (1 - f) + [cell.r, cell.g, cell.b][i]! * f) * 255)).join(',')})`;
+      ctx.fillRect(x * cw, y * ch, cw, ch);
       ctx.fillStyle = `rgb(${[cell.r, cell.g, cell.b].map((v) => Math.round(v * 255)).join(',')})`;
       ctx.fillText(cell.char, x * cw, y * ch + 2);
     }),
@@ -82,8 +86,8 @@ async function main(): Promise<void> {
   const mainEl = document.createElement('main');
   root.appendChild(mainEl);
   mainEl.innerHTML = `
-    <h1>Estampas: fotos y renders convertidos en piezas de escenario</h1>
-    <p class="note">Cada pieza parte de una foto o de un modelo 3D fotoescaneado (renderizado con tools/render_studio.py), en dominio público o CC0. tools/make_stamps.py la recorta y la reduce a 4×4 muestras por celda. En el juego se convierte a ASCII tal cual, con el algoritmo del repo y los colores reales de la imagen: sin tinte, luz, niebla ni contornos. Las piezas animadas se reproducen aquí en bucle.</p>`;
+    <h1>Estampas: modelos 3D convertidos en piezas de escenario</h1>
+    <p class="note">Cada pieza parte de un modelo 3D fotoescaneado CC0 (Poly Haven), fotografiado con tools/render_studio.py. tools/make_stamps.py lo encaja a 6×10 muestras por celda y lo revela (niveles, contraste local, saturación). En el juego, cada celda toma el color real de la imagen y un glifo de la rampa de 70 del repo: el del repo en las zonas lisas y, en los bordes y detalles, el de forma más parecida. Dentro de la silueta, un velo tenue del propio color. Sin tinte, luz, niebla ni contornos. Las piezas animadas se reproducen aquí en bucle.</p>`;
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   for (const def of [...defs.values()].sort((a, b) => a.id.localeCompare(b.id))) {
     const asset = images.get(def.id)!;
@@ -100,7 +104,7 @@ async function main(): Promise<void> {
     a.target = '_blank';
     a.rel = 'noopener';
     meta.append(
-      `${def.use === 'prop' ? 'pieza' : 'roca (rocas #)'}${def.frames > 1 ? ` · animada (${def.frames} fotogramas)` : ''}${def.shadow === 'render' ? ' · sombra renderizada' : ''} · ${def.sizeTiles[0]}×${def.sizeTiles[1]} tiles (${def.cells[0]}×${def.cells[1]} celdas) · ${def.solid ? `sólida, huella ${def.footprint.join('/')}` : 'decorativa'} · ${def.shadow === 'render' ? 'modelo 3D' : 'foto'}: `,
+      `${def.use === 'prop' ? 'pieza' : 'roca (rocas #)'}${def.frames > 1 ? ` · animada (${def.frames} fotogramas)` : ''}${def.shadow === 'render' ? ' · sombra renderizada' : ''} · ${def.sizeTiles[0]}×${def.sizeTiles[1]} tiles (${def.cells[0]}×${def.cells[1]} celdas) · ${def.solid ? `sólida, huella ${def.footprint.join('/')}` : 'decorativa'} · modelo 3D: `,
       a,
       ` de ${def.credits.author} · ${def.credits.license}`,
     );
@@ -115,12 +119,12 @@ async function main(): Promise<void> {
       d.append(cap, el);
       row.appendChild(d);
     };
-    fig('imagen procesada', pngCanvas(img, 3));
-    const game = gameCanvas(img, def.samples, paper);
-    fig(`en el juego (algoritmo del repo, colores reales${def.frames > 1 ? `, ${def.fps} fps` : ''})`, game);
+    fig('imagen revelada', pngCanvas(img, 2));
+    const game = gameCanvas(img, paper);
+    fig(`en el juego (colores reales${def.frames > 1 ? `, ${def.fps} fps` : ''})`, game);
     if (def.frames > 1 && !reduced) {
       // bucle de animación: cada fotograma convertido con el mismo algoritmo
-      const frames = asset.frames.map((f) => gameCanvas(f, def.samples, paper));
+      const frames = asset.frames.map((f) => gameCanvas(f, paper));
       const ctx = game.getContext('2d')!;
       let k = 0;
       setInterval(() => {

@@ -6,17 +6,17 @@
   "fireflies": 10,
   "props": [
     {
-      "stamp": "stump-moss",
+      "stamp": "anthurium-2",
       "tile": [
-        17,
-        5
+        16,
+        6
       ]
     },
     {
-      "stamp": "mushroom-gold",
+      "stamp": "calathea-1",
       "tile": [
         13,
-        9
+        10
       ]
     }
   ]

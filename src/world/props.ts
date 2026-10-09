@@ -1,8 +1,8 @@
 /**
- * Piezas de escenario hechas con fotos (estampas). Lógica pura, sin render:
- * definiciones (generadas por tools/make_stamps.py en src/data/stamps), colocación
- * desde el JSON de la sala, huella de colisión y agrupación de las rocas `#`
- * para pintarlas con texturas fotográficas.
+ * Piezas de escenario hechas con renders de modelos 3D (estampas). Lógica pura,
+ * sin render: definiciones (generadas por tools/make_stamps.py en
+ * src/data/stamps), colocación desde el JSON de la sala, huella de colisión y
+ * agrupación de las rocas `#` para pintarlas con rocas renderizadas.
  */
 import { tileAt, type Tilemap } from './room';
 import { TILE, TILE_PROPS } from './tiles';
@@ -16,7 +16,8 @@ export interface StampDef {
   /** tamaño de la caja de la estampa en tiles */
   sizeTiles: [number, number];
   cells: [number, number];
-  samples: number;
+  /** muestras por celda de la imagen [x, y] */
+  samples: [number, number];
   solid: boolean;
   /**
    * sombra sobre el suelo: 'cast' proyecta la silueta, 'flat' es una sombra corta
@@ -28,7 +29,7 @@ export interface StampDef {
   /** fotogramas de animación (tira vertical en la imagen); 1 = estática */
   frames: number;
   fps: number;
-  /** sombra renderizada: imagen en escala de grises y su desplazamiento (muestras) respecto a la estampa */
+  /** sombra renderizada: imagen en grises (rejilla de sombras, 4×4 muestras por celda) y su desplazamiento respecto a la estampa */
   shadowImage?: { image: string; offset: [number, number]; size: [number, number] };
   /** relleno de rocas: zonas donde se usa (sin lista = en todas) */
   zones?: string[];

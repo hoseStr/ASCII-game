@@ -1,0 +1,43 @@
+{
+  "id": "leipoldtia",
+  "image": "leipoldtia.png",
+  "use": "prop",
+  "sizeTiles": [
+    4,
+    3
+  ],
+  "cells": [
+    20,
+    9
+  ],
+  "samples": [
+    6,
+    10
+  ],
+  "solid": true,
+  "shadow": "render",
+  "footprint": [
+    "....",
+    "....",
+    "..#."
+  ],
+  "frames": 12,
+  "fps": 5,
+  "shadowImage": {
+    "image": "leipoldtia.shadow.png",
+    "offset": [
+      3,
+      -4
+    ],
+    "size": [
+      96,
+      47
+    ]
+  },
+  "credits": {
+    "title": "Leipoldtia Schultzei",
+    "author": "Jenelle van Heerden",
+    "license": "CC0-1.0",
+    "sourceUrl": "https://polyhaven.com/a/leipoldtia_schultzei"
+  }
+}

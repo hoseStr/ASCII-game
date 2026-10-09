@@ -16,7 +16,8 @@ import type { CellBuffer } from './cellBuffer';
 import { Program, RenderTarget, bindTex, createTexture, formats, type GL, type TexFormat } from './gl';
 import { EDGE_GLYPHS, MATERIALS, glyphIndex } from './glyphs';
 import { GpuTimer } from './gpuTimer';
-import { PROP_H, PROP_W } from './propLayer';
+import { SHADOW_H, SHADOW_W } from './propLayer';
+import { PROP_FILL } from './stampConvert';
 import { computeLayout, type GridLayout } from './layout';
 import { FULLSCREEN_VERT, MAX_CRYSTALS, MAX_LIGHTS, MAX_PARTICLES, PARTICLE_STRIDE, shaderSources } from './shaders';
 import type { FontInfo } from './ttf';
@@ -34,6 +35,8 @@ export interface RenderSettings {
   reducedEffects: boolean;
   /** contornos de tinta en obstáculos y costa */
   edges: boolean;
+  /** fondo de la silueta de las piezas (su propio color, tenue): se distinguen como forma */
+  propFill: boolean;
 }
 
 /** Datos de un fotograma; los arrays se reutilizan (cero allocations). */
@@ -116,11 +119,12 @@ export interface RoomRender {
 
 /** Capa de piezas de la sala (ver render/propLayer.ts). */
 export interface PropLayerData {
-  rgb: Uint8Array;
-  /** sombra proyectada en el suelo (R8, 4 muestras por celda) */
+  /** pieza ya convertida, por celda: r, g, b, posición en la rampa + 1 (0 = sin pieza) */
+  cells: Uint8Array;
+  /** por celda: fila de base + 1 (0 = sin pieza) y cobertura de la silueta 0..255 */
+  baseCov: Uint8Array;
+  /** sombra proyectada en el suelo (R8, SHADOW_W × SHADOW_H) */
   shadow: Uint8Array;
-  /** fila de base (+1) por celda, 0 = sin pieza */
-  base: Uint8Array;
 }
 
 export const PASS_LABELS = ['pictórica', 'conversión', 'glifos', 'bloom', 'final'] as const;
@@ -156,7 +160,7 @@ export class Renderer {
   private readonly fieldTex: WebGLTexture;
   private readonly tilesTex: WebGLTexture;
   private readonly noiseTex: WebGLTexture;
-  private readonly propRgbTex: WebGLTexture;
+  private readonly propCellTex: WebGLTexture;
   private readonly propShadowTex: WebGLTexture;
   private readonly propBaseTex: WebGLTexture;
   private readonly semGlyphTex: WebGLTexture;
@@ -242,12 +246,12 @@ export class Renderer {
     const r8ui: TexFormat = { internalFormat: gl.R8UI, format: gl.RED_INTEGER, type: gl.UNSIGNED_BYTE, filter: gl.NEAREST };
     this.tilesTex = createTexture(gl, SCREEN_TILES_W, SCREEN_TILES_H, r8ui, new Uint8Array(SCREEN_TILES_W * SCREEN_TILES_H));
     this.noiseTex = createNoiseTexture(gl);
-    // Piezas de escenario: bytes reales de la foto (RGBA8UI); la cobertura sale del alfa.
-    // RGBA8UI (bytes exactos): la conversión de las piezas coincide bit a bit con la de CPU.
-    this.propRgbTex = createTexture(gl, PROP_W, PROP_H, { internalFormat: gl.RGBA8UI, format: gl.RGBA_INTEGER, type: gl.UNSIGNED_BYTE, filter: gl.NEAREST });
-    // Sombras que los objetos proyectan en el suelo (se hornean en el terreno) y profundidad.
-    this.propShadowTex = createTexture(gl, PROP_W, PROP_H, { internalFormat: gl.R8, format: gl.RED, type: gl.UNSIGNED_BYTE, filter: gl.LINEAR });
-    this.propBaseTex = createTexture(gl, cols, rows, { internalFormat: gl.R8UI, format: gl.RED_INTEGER, type: gl.UNSIGNED_BYTE, filter: gl.NEAREST });
+    // Piezas de escenario ya convertidas a ASCII en CPU (stampConvert.ts), por celda:
+    // color + posición en la rampa (RGBA8UI) y fila de base + cobertura (RG8UI).
+    this.propCellTex = createTexture(gl, cols, rows, { internalFormat: gl.RGBA8UI, format: gl.RGBA_INTEGER, type: gl.UNSIGNED_BYTE, filter: gl.NEAREST });
+    this.propBaseTex = createTexture(gl, cols, rows, { internalFormat: gl.RG8UI, format: gl.RG_INTEGER, type: gl.UNSIGNED_BYTE, filter: gl.NEAREST });
+    // Sombras que los objetos proyectan en el suelo (se hornean en el terreno).
+    this.propShadowTex = createTexture(gl, SHADOW_W, SHADOW_H, { internalFormat: gl.R8, format: gl.RED, type: gl.UNSIGNED_BYTE, filter: gl.LINEAR });
     const rg16ui: TexFormat = { internalFormat: gl.RG16UI, format: gl.RG_INTEGER, type: gl.UNSIGNED_SHORT, filter: gl.NEAREST };
     this.semGlyphTex = createTexture(gl, cols, rows, rg16ui);
     this.semFgTex = createTexture(gl, cols, rows, this.fmt.rgba8);
@@ -263,12 +267,12 @@ export class Renderer {
   /** Cambia de sala: SDF de islas, tiles para el horneado y paleta de zona. */
   setRoom(room: RoomRender, palette: ZonePaletteGpu, props: PropLayerData): void {
     const gl = this.gl;
-    gl.bindTexture(gl.TEXTURE_2D, this.propRgbTex);
-    gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, PROP_W, PROP_H, gl.RGBA_INTEGER, gl.UNSIGNED_BYTE, props.rgb);
-    gl.bindTexture(gl.TEXTURE_2D, this.propShadowTex);
-    gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, PROP_W, PROP_H, gl.RED, gl.UNSIGNED_BYTE, props.shadow);
+    gl.bindTexture(gl.TEXTURE_2D, this.propCellTex);
+    gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, this.cols, this.rows, gl.RGBA_INTEGER, gl.UNSIGNED_BYTE, props.cells);
     gl.bindTexture(gl.TEXTURE_2D, this.propBaseTex);
-    gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, this.cols, this.rows, gl.RED_INTEGER, gl.UNSIGNED_BYTE, props.base);
+    gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, this.cols, this.rows, gl.RG_INTEGER, gl.UNSIGNED_BYTE, props.baseCov);
+    gl.bindTexture(gl.TEXTURE_2D, this.propShadowTex);
+    gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, SHADOW_W, SHADOW_H, gl.RED, gl.UNSIGNED_BYTE, props.shadow);
     gl.bindTexture(gl.TEXTURE_2D, this.fieldTex);
     gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, this.cols, this.rows, gl.RED, gl.FLOAT, room.field);
     gl.bindTexture(gl.TEXTURE_2D, this.tilesTex);
@@ -279,17 +283,19 @@ export class Renderer {
   }
 
   /**
-   * Sube a la GPU un rectángulo (en muestras) de la capa de piezas: lo usan las
-   * piezas animadas para no resubir la capa entera.
+   * Sube a la GPU un rectángulo de celdas de la capa de piezas (ya convertidas):
+   * lo usan las piezas animadas para no resubir la capa entera.
    */
-  updatePropRegion(rgb: Uint8Array, x: number, y: number, w: number, h: number): void {
+  updatePropCells(props: PropLayerData, x: number, y: number, w: number, h: number): void {
     const gl = this.gl;
     if (gl.isContextLost() || w <= 0 || h <= 0) return;
-    gl.bindTexture(gl.TEXTURE_2D, this.propRgbTex);
-    gl.pixelStorei(gl.UNPACK_ROW_LENGTH, PROP_W);
+    gl.pixelStorei(gl.UNPACK_ROW_LENGTH, this.cols);
     gl.pixelStorei(gl.UNPACK_SKIP_PIXELS, x);
     gl.pixelStorei(gl.UNPACK_SKIP_ROWS, y);
-    gl.texSubImage2D(gl.TEXTURE_2D, 0, x, y, w, h, gl.RGBA_INTEGER, gl.UNSIGNED_BYTE, rgb);
+    gl.bindTexture(gl.TEXTURE_2D, this.propCellTex);
+    gl.texSubImage2D(gl.TEXTURE_2D, 0, x, y, w, h, gl.RGBA_INTEGER, gl.UNSIGNED_BYTE, props.cells);
+    gl.bindTexture(gl.TEXTURE_2D, this.propBaseTex);
+    gl.texSubImage2D(gl.TEXTURE_2D, 0, x, y, w, h, gl.RG_INTEGER, gl.UNSIGNED_BYTE, props.baseCov);
     gl.pixelStorei(gl.UNPACK_ROW_LENGTH, 0);
     gl.pixelStorei(gl.UNPACK_SKIP_PIXELS, 0);
     gl.pixelStorei(gl.UNPACK_SKIP_ROWS, 0);
@@ -510,9 +516,10 @@ export class Renderer {
     bindTex(gl, p, 'uTerrainTex', 11, terrain.textures[0]!);
     bindTex(gl, p, 'uExtraTex', 12, terrain.textures[2]!);
     gl.uniform1i(p.u('uEdges'), s.fidelity || !s.edges ? 0 : 1);
-    bindTex(gl, p, 'uPropRgb', 13, this.propRgbTex);
+    bindTex(gl, p, 'uPropCell', 13, this.propCellTex);
     bindTex(gl, p, 'uPropBase', 14, this.propBaseTex);
     bindTex(gl, p, 'uPropShadow', 15, this.propShadowTex);
+    gl.uniform1f(p.u('uPropFill'), s.propFill && !s.fidelity ? PROP_FILL : 0);
     gl.uniform1uiv(p.u('uEdgeGlyph'), EDGE_GLYPH_IDS);
     gl.uniform1iv(p.u('uRampLen'), this.rampLen);
     gl.uniform1i(p.u('uS'), q.samples);
@@ -693,7 +700,7 @@ export class Renderer {
       this.progFinal,
     ])
       prog.dispose();
-    for (const t of [this.fieldTex, this.tilesTex, this.noiseTex, this.propRgbTex, this.propShadowTex, this.propBaseTex, this.semGlyphTex, this.semFgTex, this.semBgTex, this.atlasTex, this.rampsTex]) {
+    for (const t of [this.fieldTex, this.tilesTex, this.noiseTex, this.propCellTex, this.propShadowTex, this.propBaseTex, this.semGlyphTex, this.semFgTex, this.semBgTex, this.atlasTex, this.rampsTex]) {
       if (t) gl.deleteTexture(t);
     }
     for (const rt of [...this.compose, this.snapshot, this.pict, this.terrain, this.scene, ...this.bloomDown, ...this.bloomUp]) {

@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { REPO_RAMP_COMPLEX, convertColor } from '../src/render/ascii';
+import { COLOR_FLOOR } from '../src/render/stampConvert';
 import { convertStamp, resampleStamp, stampImageFromRgba } from '../src/render/stamps';
 import {
   PropError,
@@ -49,18 +50,20 @@ describe('estampas: licencias y archivos', () => {
       const png = decodePng(readFileSync(file(`src/assets/stamps/${def.image}`)));
       expect(def.frames, def.id).toBeGreaterThanOrEqual(1);
       expect(def.fps > 0, def.id).toBe(def.frames > 1);
-      expect(png.width, def.id).toBe(def.cells[0] * def.samples);
-      expect(png.height, def.id).toBe(def.cells[1] * def.samples * def.frames);
+      expect(def.samples, def.id).toEqual([6, 10]);
+      expect(png.width, def.id).toBe(def.cells[0] * def.samples[0]);
+      expect(png.height, def.id).toBe(def.cells[1] * def.samples[1] * def.frames);
       expect(def.footprint).toHaveLength(def.sizeTiles[1]);
       for (const row of def.footprint) expect(row).toHaveLength(def.sizeTiles[0]);
       if (!def.solid) expect(def.footprint.join('')).not.toContain('#');
     }
   });
 
-  it('las estampas renderizadas traen su sombra (escala de grises, del tamaño declarado)', () => {
+  it('todas son renders 3D con su sombra (escala de grises, del tamaño declarado)', () => {
     let rendered = 0;
     for (const def of defs.values()) {
-      if (def.shadow !== 'render') continue;
+      expect(def.shadow, def.id).toBe('render');
+      expect(def.credits.sourceUrl, def.id).toMatch(/^https:[/][/]polyhaven[.]com[/]a[/]/);
       rendered++;
       expect(def.shadowImage, def.id).toBeDefined();
       const png = decodePng(readFileSync(file(`src/assets/stamps/${def.shadowImage!.image}`)));
@@ -90,7 +93,8 @@ describe('estampas: licencias y archivos', () => {
           if (i % 4 === 3) alpha += f[i]!;
         }
         if (diff > 0) moved++;
-        expect(Math.abs(alpha - alpha0) / alpha0, `${def.id} f${k}`).toBeLessThan(0.15);
+        // hojas anchas que se mecen y se tapan entre sí: la silueta varía, pero sin saltos
+        expect(Math.abs(alpha - alpha0) / alpha0, `${def.id} f${k}`).toBeLessThan(0.2);
       }
       // en un vaivén senoidal el fotograma de medio ciclo puede coincidir con el 0
       expect(moved, def.id).toBeGreaterThanOrEqual(def.frames - 2);
@@ -112,7 +116,7 @@ describe('estampas: fidelidad al algoritmo del repo', () => {
         const a = png.rgba[i * 4 + 3]!;
         for (let c = 0; c < 3; c++) rgb[i * 3 + c] = Math.round((png.rgba[i * 4 + c]! * a + 255 * (255 - a)) / 255);
       }
-      const ascii = convertColor(rgb, png.width, png.height, png.width / def.samples, REPO_RAMP_COMPLEX).map((row) =>
+      const ascii = convertColor(rgb, png.width, png.height, png.width / def.samples[0], REPO_RAMP_COMPLEX).map((row) =>
         row.map((c) => c.char).join(''),
       );
       const expected = readFileSync(file(`src/data/stamps/${def.id}.preview.txt`), 'ascii').replace(/\r/g, '').split('\n');
@@ -128,7 +132,7 @@ const testDef = (over: Partial<StampDef> = {}): StampDef => ({
   use: 'prop',
   sizeTiles: [3, 2],
   cells: [15, 6],
-  samples: 4,
+  samples: [6, 10],
   solid: true,
   shadow: 'cast',
   footprint: ['...', '##.'],
@@ -177,7 +181,7 @@ describe('piezas: colocación y colisión', () => {
   });
 });
 
-describe('rocas con textura fotográfica', () => {
+describe('rocas renderizadas', () => {
   it('agrupa rocas contiguas y asigna variantes de forma determinista', () => {
     const rows = Array.from({ length: 16 }, () => ','.repeat(32).split(''));
     rows[2]![2] = '#';
@@ -211,71 +215,41 @@ describe('rocas con textura fotográfica', () => {
   });
 });
 
-describe('conversión pura de las piezas (la misma que hace compose.frag)', () => {
-  it('cada celda toma el color real de la foto y el glifo de la rampa del repo según (R+G+B)/3', () => {
-    // 2×1 celdas de 4×4 muestras: izquierda blanca opaca, derecha transparente
-    const w = 8;
-    const h = 4;
-    const rgba = new Uint8Array(w * h * 4);
-    for (let y = 0; y < h; y++) for (let x = 0; x < 4; x++) rgba.set([255, 255, 255, 255], (y * w + x) * 4);
-    const cells = convertStamp(stampImageFromRgba(rgba, w, h), 4, 'light');
-    expect(cells[0]![0]!.char).toBe('$'); // luz máxima → glifo más denso (sentido light)
-    expect([cells[0]![0]!.r, cells[0]![0]!.g, cells[0]![0]!.b]).toEqual([1, 1, 1]);
-    expect(cells[0]![1]!.char).toBe(''); // fuera de la silueta
-    expect(convertStamp(stampImageFromRgba(rgba, w, h), 4, 'ink')[0]![0]!.char).toBe(' '); // literal del repo
-  });
+describe('conversión de las piezas reales', () => {
+  const cellsOf = (id: string) => {
+    const def = defs.get(id)!;
+    const png = decodePng(readFileSync(file(`src/assets/stamps/${def.image}`)));
+    const frameH = png.height / def.frames;
+    return convertStamp(stampImageFromRgba(png.rgba.subarray(0, png.width * frameH * 4), png.width, frameH))
+      .flat()
+      .filter((c) => c.char !== '');
+  };
 
-  it('celdas opacas: glifo = fórmula literal del repo (np.mean del bloque · N / 255) y color = promedio real', () => {
-    let checked = 0;
+  it('cada pieza se ve: celdas con glifo, color con brillo mínimo y silueta con bordes', () => {
     for (const def of defs.values()) {
-      const png = decodePng(readFileSync(file(`src/assets/stamps/${def.image}`)));
-      const S = def.samples;
-      const cells = convertStamp(stampImageFromRgba(png.rgba, png.width, png.height), S, 'ink');
-      cells.forEach((row, cy) =>
-        row.forEach((cell, cx) => {
-          let sum = 0;
-          let opaque = true;
-          const rgb = [0, 0, 0];
-          for (let y = 0; y < S; y++) {
-            for (let x = 0; x < S; x++) {
-              const i = ((cy * S + y) * png.width + cx * S + x) * 4;
-              if (png.rgba[i + 3] !== 255) opaque = false;
-              for (let c = 0; c < 3; c++) {
-                sum += png.rgba[i + c]!;
-                rgb[c]! += png.rgba[i + c]!;
-              }
-            }
-          }
-          if (!opaque) return;
-          // como el repo: CHAR_LIST[min(int(np.mean(bloque) * N / 255), N - 1)]
-          const mean = sum / (S * S * 3);
-          const n = REPO_RAMP_COMPLEX.length;
-          expect(cell.char, `${def.id} (${cx}, ${cy})`).toBe(REPO_RAMP_COMPLEX[Math.min(Math.trunc((mean * n) / 255), n - 1)]);
-          expect(Math.round(cell.r * 255)).toBe(Math.round(rgb[0]! / (S * S)));
-          checked++;
-        }),
-      );
+      const cells = cellsOf(def.id);
+      expect(cells.length, def.id).toBeGreaterThan(def.cells[0] * def.cells[1] * 0.15);
+      for (const c of cells) expect(Math.round(Math.max(c.r, c.g, c.b) * 255), def.id).toBeGreaterThanOrEqual(COLOR_FLOOR);
+      // la silueta tiene celdas de borde (cobertura parcial), no solo bloques llenos
+      expect(cells.some((c) => c.cov < 0.95), def.id).toBe(true);
     }
-    expect(checked).toBeGreaterThan(500);
   });
 
-  it('las piezas reales conservan su color: la amanita es roja y el nenúfar blanco', () => {
+  it('las piezas conservan su color: el busto es de mármol (claro y sin color) y la peña óxido', () => {
     const avg = (id: string): [number, number, number] => {
-      const def = defs.get(id)!;
-      const png = decodePng(readFileSync(file(`src/assets/stamps/${def.image}`)));
-      const cells = convertStamp(stampImageFromRgba(png.rgba, png.width, png.height), def.samples).flat().filter((c) => c.char);
+      const cells = cellsOf(id);
       const s = cells.reduce((acc, c) => [acc[0] + c.r, acc[1] + c.g, acc[2] + c.b], [0, 0, 0]);
       return [s[0] / cells.length, s[1] / cells.length, s[2] / cells.length];
     };
-    const [r, g, b] = avg('mushrooms-red');
-    expect(r).toBeGreaterThan(g * 1.3);
+    const bust = avg('bust');
+    expect((bust[0] + bust[1] + bust[2]) / 3).toBeGreaterThan(0.5);
+    expect(Math.max(...bust) - Math.min(...bust)).toBeLessThan(0.15); // mármol algo cálido
+    const [r, , b] = avg('boulder-rust');
     expect(r).toBeGreaterThan(b * 1.3);
-    const lily = avg('lily-white');
-    expect(Math.min(...lily)).toBeGreaterThan(0.55);
   });
 });
 
-describe('rocas: fotos recortadas por rectángulo, sin bordes añadidos', () => {
+describe('rocas: renders recortados por rectángulo, sin bordes añadidos', () => {
   it('los rectángulos cubren cada roca exactamente una vez y no superan 3×2 tiles', () => {
     const world = new World();
     for (const [id, room] of world.rooms) {
@@ -296,7 +270,7 @@ describe('rocas: fotos recortadas por rectángulo, sin bordes añadidos', () => 
     }
   });
 
-  it('en el render, las rocas con foto no se pintan como roca procedural (sin contorno ni recorte)', () => {
+  it('en el render, las rocas renderizadas no se pintan como roca procedural (sin contorno ni recorte)', () => {
     const world = new World();
     const room = world.get('ow-1-0');
     expect(room.rockFills.length).toBeGreaterThan(0);

@@ -1,0 +1,44 @@
+{
+  "id": "anthurium-1",
+  "image": "anthurium-1.png",
+  "use": "prop",
+  "sizeTiles": [
+    4,
+    4
+  ],
+  "cells": [
+    20,
+    12
+  ],
+  "samples": [
+    6,
+    10
+  ],
+  "solid": true,
+  "shadow": "render",
+  "footprint": [
+    "....",
+    "....",
+    "....",
+    ".#.."
+  ],
+  "frames": 12,
+  "fps": 5,
+  "shadowImage": {
+    "image": "anthurium-1.shadow.png",
+    "offset": [
+      4,
+      20
+    ],
+    "size": [
+      82,
+      49
+    ]
+  },
+  "credits": {
+    "title": "Anthurium Botany 01",
+    "author": "Rob Tuytel, Rico Cilliers",
+    "license": "CC0-1.0",
+    "sourceUrl": "https://polyhaven.com/a/anthurium_botany_01"
+  }
+}

@@ -1,78 +1,6 @@
 {
-  "description": "Fuentes de imagen del pipeline de estampas. Solo CC0-1.0 o PDM-1.0 (dominio público), verificadas en la página de origen.",
+  "description": "Fuentes de las piezas de escenario: modelos 3D fotoescaneados de Poly Haven (CC0). tools/polyhaven.py descarga cada modelo y lo registra aquí con su autor, URL y licencia; tools/render_studio.py lo fotografía en art/renders/<id>/.",
   "sources": [
-    {
-      "id": "boulder-moss",
-      "file": "sources/boulder-moss.jpg",
-      "title": "2021-09-14_10-58-19_South_Bohemia_holiday",
-      "author": "Juhele_CZ",
-      "sourceUrl": "https://www.flickr.com/photos/96541566@N06/51615724824",
-      "license": "CC0-1.0",
-      "via": "Openverse"
-    },
-    {
-      "id": "mushrooms-red",
-      "file": "sources/mushrooms-red.jpg",
-      "title": "Fly agaric.",
-      "author": "Bernard Spragg",
-      "sourceUrl": "https://www.flickr.com/photos/88123769@N02/53451523967",
-      "license": "PDM-1.0",
-      "via": "Openverse"
-    },
-    {
-      "id": "mushroom-gold",
-      "file": "sources/mushroom-gold.jpg",
-      "title": "Fly Agaric (Amanita Muscaria)",
-      "author": "ShenandoahNPS",
-      "sourceUrl": "https://www.flickr.com/photos/67015038@N06/51861839256",
-      "license": "PDM-1.0",
-      "via": "Openverse"
-    },
-    {
-      "id": "stump-moss",
-      "file": "sources/stump-moss.jpg",
-      "title": "tree_stump_with_moss24",
-      "author": "Juhele_CZ",
-      "sourceUrl": "https://www.flickr.com/photos/96541566@N06/51982348091",
-      "license": "CC0-1.0",
-      "via": "Openverse"
-    },
-    {
-      "id": "log-fallen",
-      "file": "sources/log-fallen.jpg",
-      "title": "20241030-FS-SNF-SR-002",
-      "author": "Superior National Forest",
-      "sourceUrl": "https://www.flickr.com/photos/53801642@N06/54107399549",
-      "license": "PDM-1.0",
-      "via": "Openverse"
-    },
-    {
-      "id": "lily-white",
-      "file": "sources/lily-white.jpg",
-      "title": "2014-01-18_11-13-02_NZ_Auckland",
-      "author": "Juhele_CZ",
-      "sourceUrl": "https://www.flickr.com/photos/96541566@N06/51810620610",
-      "license": "CC0-1.0",
-      "via": "Openverse"
-    },
-    {
-      "id": "column",
-      "file": "sources/column.jpg",
-      "title": "2022-11-14_16-02-15_JO_day2-4_Madaba_JH",
-      "author": "Juhele_CZ",
-      "sourceUrl": "https://www.flickr.com/photos/96541566@N06/52593271127",
-      "license": "CC0-1.0",
-      "via": "Openverse"
-    },
-    {
-      "id": "bush-azalea",
-      "file": "sources/bush-azalea.jpg",
-      "title": "pink-azalea-bush",
-      "author": "alcox585",
-      "sourceUrl": "https://www.flickr.com/photos/192670421@N04/51143296650",
-      "license": "PDM-1.0",
-      "via": "Openverse"
-    },
     {
       "id": "ph-boulder_01",
       "file": "renders/boulder_01",
@@ -124,6 +52,69 @@
       "title": "Fern 02",
       "author": "Rob Tuytel, Rico Cilliers",
       "sourceUrl": "https://polyhaven.com/a/fern_02",
+      "license": "CC0-1.0",
+      "via": "Poly Haven (modelo 3D fotoescaneado, render propio)"
+    },
+    {
+      "id": "ph-rock_moss_set_01",
+      "file": "renders/rock_moss_set_01",
+      "title": "Rock Moss Set 01",
+      "author": "Kless Gyzen",
+      "sourceUrl": "https://polyhaven.com/a/rock_moss_set_01",
+      "license": "CC0-1.0",
+      "via": "Poly Haven (modelo 3D fotoescaneado, render propio)"
+    },
+    {
+      "id": "ph-gothic_statue",
+      "file": "renders/gothic_statue",
+      "title": "Gothic Statue",
+      "author": "Benny Weimer",
+      "sourceUrl": "https://polyhaven.com/a/gothic_statue",
+      "license": "CC0-1.0",
+      "via": "Poly Haven (modelo 3D fotoescaneado, render propio)"
+    },
+    {
+      "id": "ph-marble_bust_01",
+      "file": "renders/marble_bust_01",
+      "title": "Marble Bust 01",
+      "author": "Rico Cilliers",
+      "sourceUrl": "https://polyhaven.com/a/marble_bust_01",
+      "license": "CC0-1.0",
+      "via": "Poly Haven (modelo 3D fotoescaneado, render propio)"
+    },
+    {
+      "id": "ph-calathea_orbifolia_01",
+      "file": "renders/calathea_orbifolia_01",
+      "title": "Calathea Orbifolia 01",
+      "author": "Rob Tuytel, Rico Cilliers",
+      "sourceUrl": "https://polyhaven.com/a/calathea_orbifolia_01",
+      "license": "CC0-1.0",
+      "via": "Poly Haven (modelo 3D fotoescaneado, render propio)"
+    },
+    {
+      "id": "ph-anthurium_botany_01",
+      "file": "renders/anthurium_botany_01",
+      "title": "Anthurium Botany 01",
+      "author": "Rob Tuytel, Rico Cilliers",
+      "sourceUrl": "https://polyhaven.com/a/anthurium_botany_01",
+      "license": "CC0-1.0",
+      "via": "Poly Haven (modelo 3D fotoescaneado, render propio)"
+    },
+    {
+      "id": "ph-flower_gazania",
+      "file": "renders/flower_gazania",
+      "title": "Flower Gazania",
+      "author": "James Ray Cock, Jenelle van Heerden",
+      "sourceUrl": "https://polyhaven.com/a/flower_gazania",
+      "license": "CC0-1.0",
+      "via": "Poly Haven (modelo 3D fotoescaneado, render propio)"
+    },
+    {
+      "id": "ph-leipoldtia_schultzei",
+      "file": "renders/leipoldtia_schultzei",
+      "title": "Leipoldtia Schultzei",
+      "author": "Jenelle van Heerden",
+      "sourceUrl": "https://polyhaven.com/a/leipoldtia_schultzei",
       "license": "CC0-1.0",
       "via": "Poly Haven (modelo 3D fotoescaneado, render propio)"
     }

@@ -48,10 +48,11 @@ uniform highp sampler2D uSnapState;
 uniform highp sampler2D uTerrainTex; // .x = SDF de la costa (negativo dentro de la isla)
 uniform highp sampler2D uExtraTex;   // .w = SDF de los obstáculos (negativo dentro)
 uniform int uEdges;                  // 1 = dibujar contornos
-// piezas de escenario: fotos convertidas TAL CUAL (ver render/propLayer.ts)
-uniform highp usampler2D uPropRgb;   // bytes reales de la foto (RGBA8UI), 4 muestras por celda
-uniform highp usampler2D uPropBase;  // fila de base (+1) de la pieza en cada celda, 0 = ninguna
+// piezas de escenario: renders 3D ya convertidos a ASCII en CPU (render/stampConvert.ts)
+uniform highp usampler2D uPropCell;  // rgb + posición en la rampa (+1; 0 = sin pieza)
+uniform highp usampler2D uPropBase;  // r = fila de base (+1; 0 = ninguna), g = cobertura de la silueta
 uniform highp sampler2D uPropShadow; // sombra que los objetos proyectan en el suelo (0..1)
+uniform float uPropFill;             // fondo de la silueta: mezcla hacia el color de la pieza
 uniform uint uEdgeGlyph[4];          // ─ │ / \
 
 layout(location = 0) out vec4 oFg;    // rgb, emisividad (bloom)
@@ -232,40 +233,24 @@ void main() {
   float lum = luminance(avg);
   float emissive = smoothstep(0.45, 1.1, lum);
 
-  // --- piezas de escenario: la foto convertida a ASCII tal cual -------------------------
-  // Algoritmo del repo sobre los colores REALES de la foto (sin tinte, luz, niebla,
-  // respiración, contornos ni bloom): color = promedio de las muestras cubiertas,
-  // L = (R + G + B) / 3, índice = min(floor(L·N/255), N−1) en la rampa de 70.
-  // Aritmética entera (bytes de la foto): el resultado es idéntico al de la CPU.
-  uvec3 pSumCA = uvec3(0u); // suma de color · alfa
-  uint pSumA = 0u;          // suma de alfa
-  for (int y = 0; y < 4; y++) {
-    for (int x = 0; x < 4; x++) {
-      uvec4 v = texelFetch(uPropRgb, src * 4 + ivec2(x, y), 0);
-      pSumCA += v.rgb * v.a;
-      pSumA += v.a;
-    }
-  }
-  // la celda es parte de la pieza si la silueta de la foto cubre al menos la mitad
-  bool pure = pSumA * 2u >= 16u * 255u;
+  // --- piezas de escenario: la imagen convertida a ASCII en CPU ---------------------------
+  // Glifo de la rampa del repo (por forma en los bordes y detalles, el del repo en las
+  // zonas lisas) y color real de la imagen; sin tinte, luz, niebla, respiración,
+  // contornos ni bloom. El fondo de la celda es el del entorno, con un velo tenue del
+  // color de la pieza dentro de su silueta: la pieza se lee como una forma.
+  uvec4 pcell = texelFetch(uPropCell, src, 0);
+  uvec2 pbase = texelFetch(uPropBase, src, 0).rg;
+  bool pure = pcell.a > 0u;
   bool noBloom = false;
   if (pure && uLegibility == 0) {
-    // color del bloque en 8 bits (como los píxeles del repo) e índice con enteros:
-    // idx = min(floor((R+G+B)/3 · N / 255), N−1) sin errores de redondeo de coma flotante
-    ivec3 c8 = ivec3((2u * pSumCA + pSumA) / (2u * pSumA)); // color: floor(suma(c·a)/suma(a) + 0,5)
-    vec3 pc = vec3(c8) / 255.0;
-    // índice con la media EXACTA de los píxeles (np.mean del repo), en enteros:
-    // floor(suma(c·a) · N / (3 · 255 · suma(a)))
-    uint pAll = pSumCA.r + pSumCA.g + pSumCA.b;
-    float pL = float(pAll) / (3.0 * float(pSumA));
-    int pn = uRampLen[MAT_BASE];
-    int pIdx = min(int(pAll * uint(pn) / (765u * pSumA)), pn - 1);
+    int pos = int(pcell.a) - 1;
+    vec3 pc = vec3(pcell.rgb) / 255.0;
     mat = MAT_BASE;
-    idx = pIdx;
-    Ls = pL;
-    glyph = rampGlyph(MAT_BASE, scrambleIdx(pIdx, MAT_BASE, cell, scramble));
+    idx = pos;
+    Ls = (pc.r + pc.g + pc.b) / 3.0 * 255.0;
+    glyph = rampGlyph(MAT_BASE, scrambleIdx(pos, MAT_BASE, cell, scramble));
     fg = pc;
-    // el fondo de la celda es el del entorno: la pieza no lleva caja ni marco
+    bg = mix(bg, pc, uPropFill * min(1.0, float(pbase.g) / 255.0 * 1.5));
     emissive = 0.0;
     noBloom = true;
   }
@@ -296,7 +281,7 @@ void main() {
   uvec2 sem = texelFetch(uSem, src, 0).rg;
   float isSem = 0.0;
   uint semDepth = (sem.y >> DEPTH_SHIFT) & DEPTH_MASK;
-  uint propBase = texelFetch(uPropBase, src, 0).r;
+  uint propBase = pbase.r;
   bool hidden = pureProp && semDepth > 0u && propBase > 0u && semDepth < propBase;
   if ((sem.y & FLAG_OCCUPIED) != 0u && !hidden) {
     vec4 sf = texelFetch(uSemFg, src, 0);

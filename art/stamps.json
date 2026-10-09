@@ -1,95 +1,57 @@
 {
-  "description": "Definición de las estampas (piezas de escenario). Procesar con: .cache/venv-tools/Scripts/python -P tools/make_stamps.py. mode: 'render' (render del estudio, tools/render_studio.py: alfa limpio, escala real y sombra renderizada; 'variant' elige el objeto), 'grabcut' o 'key-dark' (fotos; rect = [x0, y0, x1, y1] normalizado sobre la foto). sizeTiles = [ancho, alto] en tiles (1 tile = 5×3 celdas = 3×3 unidades) o 'auto' (renders: escala real × scale; rocas: el rectángulo ≤3×2 de proporción más parecida). En el juego se convierten a ASCII tal cual, con el algoritmo del repo y los colores reales. shadow: 'cast' (proyecta su silueta sobre el suelo) o 'flat' (objeto plano: sombra corta bajo él); los renders traen su sombra. animate (fotos): {type: 'sway' | 'bob', frames, amp}; los renders animados traen sus fotogramas (viento). fps: velocidad del bucle. zones (rocas): zonas donde se usa la variante.",
+  "description": "Definición de las estampas: piezas de escenario hechas SOLO con modelos 3D fotoescaneados CC0 (Poly Haven), fotografiados con tools/render_studio.py. Procesar con: .cache/venv-tools/Scripts/python -P tools/make_stamps.py. source: id del manifiesto (art/manifest.json); variant: objeto del render (v0, v1…). sizeTiles = [ancho, alto] en tiles (1 tile = 5×3 celdas = 3×3 unidades) o 'auto' (piezas: escala real × scale; rocas: el rectángulo ≤3×2 de proporción más parecida). collision: 'alpha' (tiles con silueta ≥ 40 %) o 'base' (solo la fila de abajo). fps: velocidad del bucle de viento (los renders animados traen sus fotogramas). zones (rocas): zonas donde se usa la variante.",
   "stamps": [
     {
-      "id": "boulder-moss",
-      "source": "boulder-moss",
-      "mode": "grabcut",
-      "rect": [
-        0.27,
-        0.27,
-        0.93,
-        0.9
-      ],
-      "use": "prop",
-      "sizeTiles": [
-        5,
-        3
-      ],
-      "solid": true,
-      "collision": "alpha",
-      "shadow": "cast"
-    },
-    {
-      "id": "mushrooms-red",
-      "source": "mushrooms-red",
-      "mode": "grabcut",
-      "rect": [
-        0.08,
-        0.03,
-        0.64,
-        0.95
-      ],
+      "id": "rock-block",
+      "source": "ph-rock_moss_set_01",
+      "variant": "v2",
       "use": "prop",
       "sizeTiles": [
         4,
-        4
+        3
       ],
       "solid": true,
-      "collision": "base",
-      "shadow": "cast"
+      "collision": "alpha"
     },
     {
-      "id": "mushroom-gold",
-      "source": "mushroom-gold",
-      "mode": "grabcut",
-      "rect": [
-        0.06,
-        0.17,
-        0.97,
-        0.9
-      ],
+      "id": "rock-tall",
+      "source": "ph-rock_moss_set_01",
+      "variant": "v3",
       "use": "prop",
       "sizeTiles": [
         3,
         3
       ],
       "solid": true,
-      "collision": "base",
-      "fg": [
-        [
-          0.36,
-          0.6,
-          0.5,
-          0.84
-        ],
-        [
-          0.2,
-          0.3,
-          0.85,
-          0.5
-        ]
+      "collision": "alpha"
+    },
+    {
+      "id": "rock-round",
+      "source": "ph-rock_moss_set_01",
+      "variant": "v1",
+      "use": "prop",
+      "sizeTiles": [
+        3,
+        3
       ],
-      "bg": [
-        [
-          0.58,
-          0.58,
-          1.0,
-          1.0
-        ],
-        [
-          0.0,
-          0.62,
-          0.26,
-          1.0
-        ]
+      "solid": true,
+      "collision": "alpha"
+    },
+    {
+      "id": "rock-pile",
+      "source": "ph-namaqualand_boulder_02",
+      "variant": "v0",
+      "use": "prop",
+      "sizeTiles": [
+        5,
+        2
       ],
-      "shadow": "cast"
+      "solid": true,
+      "collision": "alpha"
     },
     {
       "id": "fern-1",
       "source": "ph-fern_02",
-      "mode": "render",
       "variant": "v1",
       "use": "prop",
       "sizeTiles": [
@@ -103,7 +65,6 @@
     {
       "id": "fern-2",
       "source": "ph-fern_02",
-      "mode": "render",
       "variant": "v2",
       "use": "prop",
       "sizeTiles": [
@@ -117,7 +78,6 @@
     {
       "id": "fern-3",
       "source": "ph-fern_02",
-      "mode": "render",
       "variant": "v3",
       "use": "prop",
       "sizeTiles": [
@@ -129,53 +89,61 @@
       "fps": 6
     },
     {
-      "id": "stump-moss",
-      "source": "stump-moss",
-      "mode": "grabcut",
-      "rect": [
-        0.25,
-        0.05,
-        0.71,
-        0.9
-      ],
+      "id": "anthurium-1",
+      "source": "ph-anthurium_botany_01",
+      "variant": "v0",
       "use": "prop",
       "sizeTiles": [
-        3,
+        4,
         4
       ],
       "solid": true,
       "collision": "base",
-      "shadow": "cast"
+      "fps": 5
     },
     {
-      "id": "log-fallen",
-      "source": "log-fallen",
-      "mode": "grabcut",
-      "rect": [
-        0.0,
-        0.32,
-        1.0,
-        0.9
-      ],
+      "id": "anthurium-2",
+      "source": "ph-anthurium_botany_01",
+      "variant": "v1",
       "use": "prop",
       "sizeTiles": [
-        5,
+        4,
+        3
+      ],
+      "solid": true,
+      "collision": "base",
+      "fps": 5
+    },
+    {
+      "id": "calathea-1",
+      "source": "ph-calathea_orbifolia_01",
+      "variant": "v0",
+      "use": "prop",
+      "sizeTiles": [
+        3,
         2
       ],
       "solid": true,
       "collision": "base",
-      "shadow": "cast"
+      "fps": 5
     },
     {
-      "id": "lily-white",
-      "source": "lily-white",
-      "mode": "grabcut",
-      "rect": [
-        0.25,
-        0.15,
-        0.73,
-        0.84
+      "id": "calathea-2",
+      "source": "ph-calathea_orbifolia_01",
+      "variant": "v1",
+      "use": "prop",
+      "sizeTiles": [
+        3,
+        3
       ],
+      "solid": true,
+      "collision": "base",
+      "fps": 5
+    },
+    {
+      "id": "gazania",
+      "source": "ph-flower_gazania",
+      "variant": "v5",
       "use": "prop",
       "sizeTiles": [
         4,
@@ -183,62 +151,74 @@
       ],
       "solid": false,
       "collision": "none",
-      "shadow": "flat",
-      "animate": {
-        "type": "bob",
-        "frames": 12,
-        "amp": 1.0
-      },
-      "fps": 5
+      "fps": 6
     },
     {
-      "id": "column",
-      "source": "column",
-      "mode": "grabcut",
-      "rect": [
-        0.31,
-        0.23,
-        0.55,
-        0.99
-      ],
-      "use": "prop",
-      "sizeTiles": [
-        2,
-        5
-      ],
-      "solid": true,
-      "collision": "base",
-      "shadow": "cast"
-    },
-    {
-      "id": "bush-azalea",
-      "source": "bush-azalea",
-      "mode": "grabcut",
-      "rect": [
-        0.38,
-        0.19,
-        0.82,
-        0.75
-      ],
+      "id": "leipoldtia",
+      "source": "ph-leipoldtia_schultzei",
+      "variant": "v0",
       "use": "prop",
       "sizeTiles": [
         4,
-        4
+        3
       ],
       "solid": true,
-      "collision": "alpha",
-      "shadow": "cast",
-      "animate": {
-        "type": "sway",
-        "frames": 12,
-        "amp": 0.035
-      },
-      "fps": 6
+      "collision": "base",
+      "fps": 5
+    },
+    {
+      "id": "pad-1",
+      "source": "ph-calathea_orbifolia_01",
+      "variant": "v2",
+      "use": "prop",
+      "sizeTiles": [
+        5,
+        3
+      ],
+      "solid": false,
+      "collision": "none",
+      "fps": 4
+    },
+    {
+      "id": "pad-2",
+      "source": "ph-calathea_orbifolia_01",
+      "variant": "v3",
+      "use": "prop",
+      "sizeTiles": [
+        4,
+        3
+      ],
+      "solid": false,
+      "collision": "none",
+      "fps": 4
+    },
+    {
+      "id": "bust",
+      "source": "ph-marble_bust_01",
+      "variant": "v0",
+      "use": "prop",
+      "sizeTiles": [
+        2,
+        3
+      ],
+      "solid": true,
+      "collision": "base"
+    },
+    {
+      "id": "statue",
+      "source": "ph-gothic_statue",
+      "variant": "v0",
+      "use": "prop",
+      "sizeTiles": [
+        3,
+        3
+      ],
+      "solid": true,
+      "collision": "base"
     },
     {
       "id": "rock-moss-1",
       "source": "ph-rock_moss_set_02",
-      "mode": "render",
       "variant": "v0",
       "use": "rockfill",
       "sizeTiles": "auto",
@@ -256,7 +236,6 @@
     {
       "id": "rock-moss-2",
       "source": "ph-rock_moss_set_02",
-      "mode": "render",
       "variant": "v1",
       "use": "rockfill",
       "sizeTiles": "auto",
@@ -274,7 +253,6 @@
     {
       "id": "rock-moss-3",
       "source": "ph-rock_moss_set_02",
-      "mode": "render",
       "variant": "v2",
       "use": "rockfill",
       "sizeTiles": "auto",
@@ -292,7 +270,6 @@
     {
       "id": "rock-moss-4",
       "source": "ph-rock_moss_set_02",
-      "mode": "render",
       "variant": "v3",
       "use": "rockfill",
       "sizeTiles": "auto",
@@ -310,7 +287,6 @@
     {
       "id": "rock-moss-5",
       "source": "ph-rock_moss_set_02",
-      "mode": "render",
       "variant": "v4",
       "use": "rockfill",
       "sizeTiles": "auto",
@@ -328,7 +304,6 @@
     {
       "id": "rock-moss-6",
       "source": "ph-rock_moss_set_02",
-      "mode": "render",
       "variant": "v5",
       "use": "rockfill",
       "sizeTiles": "auto",
@@ -346,7 +321,6 @@
     {
       "id": "rock-moss-7",
       "source": "ph-rock_moss_set_02",
-      "mode": "render",
       "variant": "v6",
       "use": "rockfill",
       "sizeTiles": "auto",
@@ -364,7 +338,6 @@
     {
       "id": "boulder-red",
       "source": "ph-boulder_01",
-      "mode": "render",
       "variant": "v0",
       "use": "rockfill",
       "sizeTiles": "auto",
@@ -378,7 +351,6 @@
     {
       "id": "boulder-pile",
       "source": "ph-namaqualand_boulder_02",
-      "mode": "render",
       "variant": "v0",
       "use": "rockfill",
       "sizeTiles": "auto",
@@ -392,7 +364,6 @@
     {
       "id": "boulder-rust",
       "source": "ph-namaqualand_boulder_04",
-      "mode": "render",
       "variant": "v0",
       "use": "rockfill",
       "sizeTiles": "auto",
@@ -406,8 +377,46 @@
     {
       "id": "boulder-sand",
       "source": "ph-namaqualand_boulder_05",
-      "mode": "render",
       "variant": "v0",
+      "use": "rockfill",
+      "sizeTiles": "auto",
+      "solid": false,
+      "collision": "none",
+      "zones": [
+        "ruins",
+        "threshold"
+      ]
+    },
+    {
+      "id": "rock-sand-1",
+      "source": "ph-rock_moss_set_01",
+      "variant": "v0",
+      "use": "rockfill",
+      "sizeTiles": "auto",
+      "solid": false,
+      "collision": "none",
+      "zones": [
+        "ruins",
+        "threshold"
+      ]
+    },
+    {
+      "id": "rock-sand-2",
+      "source": "ph-rock_moss_set_01",
+      "variant": "v4",
+      "use": "rockfill",
+      "sizeTiles": "auto",
+      "solid": false,
+      "collision": "none",
+      "zones": [
+        "ruins",
+        "threshold"
+      ]
+    },
+    {
+      "id": "rock-sand-3",
+      "source": "ph-rock_moss_set_01",
+      "variant": "v5",
       "use": "rockfill",
       "sizeTiles": "auto",
       "solid": false,

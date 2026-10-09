@@ -45,8 +45,10 @@ def parse_args():
     ap.add_argument("--frames", type=int, default=0)
     ap.add_argument("--wind", type=float, default=0.1, help="amplitud del vaivén (fracción de la altura)")
     ap.add_argument("--wave", type=float, default=0.5, help="desfase de la ráfaga a lo ancho (vueltas): las hojas no se mueven al unísono")
-    ap.add_argument("--only", type=int, default=-1, help="renderizar solo la variante con este índice")
+    ap.add_argument("--only", default="", help="renderizar solo estas variantes (índices separados por comas, p. ej. 1,2)")
     ap.add_argument("--exposure", type=float, default=1.0, help="exposición de la cámara (EV), como al fotografiar a pleno día")
+    ap.add_argument("--fill", type=float, default=0.0, help="luz de relleno frontal sin sombra (energía): aclara la cara en sombra")
+    ap.add_argument("--rim", type=float, default=0.0, help="luz de contorno desde atrás sin sombra (energía): perfila la silueta")
     ap.add_argument("--clip", type=float, default=0.0, help="quitar las caras por debajo de esta altura (m): suelo escaneado")
     return ap.parse_args(argv)
 
@@ -98,7 +100,19 @@ def world_bbox(objs):
     return lo, hi
 
 
-def setup_camera_and_sun(scene, lo, hi):
+def add_shadowless_sun(scene, name, direction_to_light, energy):
+    """Luz auxiliar sin sombra: solo ilumina, la sombra del suelo sigue siendo la del sol."""
+    data = bpy.data.lights.new(name, type="SUN")
+    data.energy = energy
+    data.angle = math.radians(20.0)
+    data.use_shadow = False
+    obj = bpy.data.objects.new(name, data)
+    obj.rotation_euler = (-direction_to_light.normalized()).to_track_quat("-Z", "Y").to_euler()
+    scene.collection.objects.link(obj)
+    return obj
+
+
+def setup_camera_and_sun(scene, lo, hi, fill=0.0, rim=0.0):
     # cámara: al sur del objeto, mirando al norte y hacia abajo
     cam_data = bpy.data.cameras.new("cam")
     cam_data.type = "ORTHO"
@@ -121,6 +135,12 @@ def setup_camera_and_sun(scene, lo, hi):
     sun = bpy.data.objects.new("sol", sun_data)
     sun.rotation_euler = (-to_sun).to_track_quat("-Z", "Y").to_euler()
     scene.collection.objects.link(sun)
+    # relleno: desde la cámara (de frente), para que la cara en sombra no se pierda en la noche
+    if fill > 0:
+        add_shadowless_sun(scene, "relleno", Vector((0.25, -math.cos(e), math.sin(e))), fill)
+    # contorno: desde atrás y arriba (norte), ilumina los bordes superiores de la silueta
+    if rim > 0:
+        add_shadowless_sun(scene, "contorno", Vector((0.0, 1.0, 0.55)), rim)
 
     # encuadre: el objeto y su sombra en el suelo (proyección de las esquinas a lo largo del sol)
     pts = []
@@ -168,8 +188,9 @@ def main():
     roots = mesh_roots()
     print(f"[estudio] {len(roots)} variante(s): {[r.name for r in roots]}")
     summary = []
+    only = {int(v) for v in args.only.split(",") if v.strip()}
     for vi, root in enumerate(roots):
-        if args.only >= 0 and vi != args.only:
+        if only and vi not in only:
             continue
         # solo esta variante visible
         for r in roots:
@@ -202,7 +223,7 @@ def main():
         for o in list(scene.objects):
             if o.type in ("CAMERA", "LIGHT") or o.name.startswith("Plane"):
                 bpy.data.objects.remove(o, do_unlink=True)
-        cam, sun, w, h, size = setup_camera_and_sun(scene, lo, hi)
+        cam, sun, w, h, size = setup_camera_and_sun(scene, lo, hi, args.fill, args.rim)
         aspect = w / h
         res_x = args.res if aspect >= 1 else max(8, round(args.res * aspect))
         res_y = args.res if aspect < 1 else max(8, round(args.res / aspect))
@@ -269,6 +290,8 @@ def main():
             "frames": frames if frames > 1 else 0,
             "elevationDeg": ELEVATION_DEG,
             "exposure": args.exposure,
+            "fill": args.fill,
+            "rim": args.rim,
         }
         with open(os.path.join(args.out, f"{name}.json"), "w", encoding="utf-8", newline="\n") as f:
             json.dump(meta, f, indent=2)

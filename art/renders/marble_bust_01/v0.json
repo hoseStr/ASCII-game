@@ -1,0 +1,19 @@
+{
+  "variant": "v0",
+  "object": "marble_bust_01",
+  "metersPerPixel": 0.001847840973072582,
+  "size": [
+    344,
+    360
+  ],
+  "bboxMeters": [
+    0.2717496156692505,
+    0.299713671207428,
+    0.5149431824684143
+  ],
+  "frames": 0,
+  "elevationDeg": 50.0,
+  "exposure": 1.0,
+  "fill": 1.2,
+  "rim": 2.5
+}

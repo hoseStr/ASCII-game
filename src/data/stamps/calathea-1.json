@@ -1,0 +1,42 @@
+{
+  "id": "calathea-1",
+  "image": "calathea-1.png",
+  "use": "prop",
+  "sizeTiles": [
+    3,
+    2
+  ],
+  "cells": [
+    15,
+    6
+  ],
+  "samples": [
+    6,
+    10
+  ],
+  "solid": true,
+  "shadow": "render",
+  "footprint": [
+    "...",
+    "##."
+  ],
+  "frames": 12,
+  "fps": 5,
+  "shadowImage": {
+    "image": "calathea-1.shadow.png",
+    "offset": [
+      11,
+      9
+    ],
+    "size": [
+      66,
+      27
+    ]
+  },
+  "credits": {
+    "title": "Calathea Orbifolia 01",
+    "author": "Rob Tuytel, Rico Cilliers",
+    "license": "CC0-1.0",
+    "sourceUrl": "https://polyhaven.com/a/calathea_orbifolia_01"
+  }
+}

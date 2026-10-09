@@ -13,5 +13,7 @@
   ],
   "frames": 0,
   "elevationDeg": 50.0,
-  "exposure": 1.0
+  "exposure": 1.0,
+  "fill": 1.2,
+  "rim": 2.5
 }

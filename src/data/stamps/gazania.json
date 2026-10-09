@@ -1,0 +1,43 @@
+{
+  "id": "gazania",
+  "image": "gazania.png",
+  "use": "prop",
+  "sizeTiles": [
+    4,
+    3
+  ],
+  "cells": [
+    20,
+    9
+  ],
+  "samples": [
+    6,
+    10
+  ],
+  "solid": false,
+  "shadow": "render",
+  "footprint": [
+    "....",
+    "....",
+    "...."
+  ],
+  "frames": 12,
+  "fps": 6,
+  "shadowImage": {
+    "image": "gazania.shadow.png",
+    "offset": [
+      25,
+      32
+    ],
+    "size": [
+      78,
+      33
+    ]
+  },
+  "credits": {
+    "title": "Flower Gazania",
+    "author": "James Ray Cock, Jenelle van Heerden",
+    "license": "CC0-1.0",
+    "sourceUrl": "https://polyhaven.com/a/flower_gazania"
+  }
+}

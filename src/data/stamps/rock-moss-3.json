@@ -10,7 +10,10 @@
     10,
     3
   ],
-  "samples": 4,
+  "samples": [
+    6,
+    10
+  ],
   "solid": false,
   "shadow": "render",
   "footprint": [
@@ -18,6 +21,17 @@
   ],
   "frames": 1,
   "fps": 0,
+  "shadowImage": {
+    "image": "rock-moss-3.shadow.png",
+    "offset": [
+      0,
+      1
+    ],
+    "size": [
+      40,
+      14
+    ]
+  },
   "credits": {
     "title": "Rock Moss Set 02",
     "author": "Kless Gyzen",
@@ -31,16 +45,5 @@
     "lake",
     "garden",
     "threshold"
-  ],
-  "shadowImage": {
-    "image": "rock-moss-3.shadow.png",
-    "offset": [
-      -1,
-      0
-    ],
-    "size": [
-      42,
-      15
-    ]
-  }
+  ]
 }

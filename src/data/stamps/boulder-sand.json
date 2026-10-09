@@ -10,7 +10,10 @@
     10,
     3
   ],
-  "samples": 4,
+  "samples": [
+    6,
+    10
+  ],
   "solid": false,
   "shadow": "render",
   "footprint": [
@@ -18,6 +21,17 @@
   ],
   "frames": 1,
   "fps": 0,
+  "shadowImage": {
+    "image": "boulder-sand.shadow.png",
+    "offset": [
+      4,
+      5
+    ],
+    "size": [
+      41,
+      12
+    ]
+  },
   "credits": {
     "title": "Namaqualand Boulder 05",
     "author": "Jenelle van Heerden, Dario Barresi",
@@ -27,16 +41,5 @@
   "zones": [
     "ruins",
     "threshold"
-  ],
-  "shadowImage": {
-    "image": "boulder-sand.shadow.png",
-    "offset": [
-      2,
-      3
-    ],
-    "size": [
-      43,
-      14
-    ]
-  }
+  ]
 }

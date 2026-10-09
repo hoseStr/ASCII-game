@@ -6,10 +6,10 @@
   "fireflies": 28,
   "props": [
     {
-      "stamp": "log-fallen",
+      "stamp": "rock-round",
       "tile": [
-        12,
-        7
+        13,
+        6
       ]
     },
     {

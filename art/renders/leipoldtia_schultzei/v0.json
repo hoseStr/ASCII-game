@@ -1,0 +1,19 @@
+{
+  "variant": "v0",
+  "object": "leipoldtia_schultzei_Large_LOD0",
+  "metersPerPixel": 0.003744229663163424,
+  "size": [
+    320,
+    285
+  ],
+  "bboxMeters": [
+    0.9344695806503296,
+    0.8097845315933228,
+    0.30763229727745056
+  ],
+  "frames": 12,
+  "elevationDeg": 50.0,
+  "exposure": 1.0,
+  "fill": 1.2,
+  "rim": 2.5
+}

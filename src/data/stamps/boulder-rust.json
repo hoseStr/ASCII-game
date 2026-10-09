@@ -10,7 +10,10 @@
     10,
     6
   ],
-  "samples": 4,
+  "samples": [
+    6,
+    10
+  ],
   "solid": false,
   "shadow": "render",
   "footprint": [
@@ -19,6 +22,17 @@
   ],
   "frames": 1,
   "fps": 0,
+  "shadowImage": {
+    "image": "boulder-rust.shadow.png",
+    "offset": [
+      -1,
+      7
+    ],
+    "size": [
+      57,
+      24
+    ]
+  },
   "credits": {
     "title": "Namaqualand Boulder 04",
     "author": "Jenelle van Heerden",
@@ -28,16 +42,5 @@
   "zones": [
     "ruins",
     "threshold"
-  ],
-  "shadowImage": {
-    "image": "boulder-rust.shadow.png",
-    "offset": [
-      -2,
-      6
-    ],
-    "size": [
-      58,
-      25
-    ]
-  }
+  ]
 }

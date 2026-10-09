@@ -6,19 +6,18 @@
   "fireflies": 10,
   "props": [
     {
-      "stamp": "column",
+      "stamp": "bust",
       "tile": [
         6,
-        6
+        8
       ]
     },
     {
-      "stamp": "column",
+      "stamp": "statue",
       "tile": [
-        24,
-        6
-      ],
-      "flip": true
+        23,
+        8
+      ]
     }
   ]
 }

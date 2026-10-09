@@ -211,7 +211,7 @@ export class Game {
       for (let k = 0; k < L.dirtyCount; k++) {
         const x0 = r[k * 4]!;
         const y0 = r[k * 4 + 1]!;
-        this.renderer.updatePropRegion(L.rgb, x0, y0, r[k * 4 + 2]! - x0 + 1, r[k * 4 + 3]! - y0 + 1);
+        this.renderer.updatePropCells(L, x0, y0, r[k * 4 + 2]! - x0 + 1, r[k * 4 + 3]! - y0 + 1);
       }
     }
 

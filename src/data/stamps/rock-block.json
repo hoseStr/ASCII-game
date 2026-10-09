@@ -1,0 +1,43 @@
+{
+  "id": "rock-block",
+  "image": "rock-block.png",
+  "use": "prop",
+  "sizeTiles": [
+    4,
+    3
+  ],
+  "cells": [
+    20,
+    9
+  ],
+  "samples": [
+    6,
+    10
+  ],
+  "solid": true,
+  "shadow": "render",
+  "footprint": [
+    "####",
+    "####",
+    "####"
+  ],
+  "frames": 1,
+  "fps": 0,
+  "shadowImage": {
+    "image": "rock-block.shadow.png",
+    "offset": [
+      -2,
+      3
+    ],
+    "size": [
+      103,
+      39
+    ]
+  },
+  "credits": {
+    "title": "Rock Moss Set 01",
+    "author": "Kless Gyzen",
+    "license": "CC0-1.0",
+    "sourceUrl": "https://polyhaven.com/a/rock_moss_set_01"
+  }
+}

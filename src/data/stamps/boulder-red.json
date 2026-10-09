@@ -10,7 +10,10 @@
     10,
     6
   ],
-  "samples": 4,
+  "samples": [
+    6,
+    10
+  ],
   "solid": false,
   "shadow": "render",
   "footprint": [
@@ -19,6 +22,17 @@
   ],
   "frames": 1,
   "fps": 0,
+  "shadowImage": {
+    "image": "boulder-red.shadow.png",
+    "offset": [
+      2,
+      3
+    ],
+    "size": [
+      45,
+      31
+    ]
+  },
   "credits": {
     "title": "Boulder 01",
     "author": "Rico Cilliers",
@@ -28,16 +42,5 @@
   "zones": [
     "ruins",
     "threshold"
-  ],
-  "shadowImage": {
-    "image": "boulder-red.shadow.png",
-    "offset": [
-      0,
-      3
-    ],
-    "size": [
-      48,
-      31
-    ]
-  }
+  ]
 }

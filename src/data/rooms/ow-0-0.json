@@ -6,16 +6,16 @@
   "fireflies": 14,
   "props": [
     {
-      "stamp": "bush-azalea",
+      "stamp": "leipoldtia",
       "tile": [
         7,
-        7
+        8
       ]
     },
     {
-      "stamp": "mushroom-gold",
+      "stamp": "gazania",
       "tile": [
-        15,
+        14,
         8
       ]
     }

@@ -1,0 +1,43 @@
+{
+  "id": "bust",
+  "image": "bust.png",
+  "use": "prop",
+  "sizeTiles": [
+    2,
+    3
+  ],
+  "cells": [
+    10,
+    9
+  ],
+  "samples": [
+    6,
+    10
+  ],
+  "solid": true,
+  "shadow": "render",
+  "footprint": [
+    "..",
+    "..",
+    "##"
+  ],
+  "frames": 1,
+  "fps": 0,
+  "shadowImage": {
+    "image": "bust.shadow.png",
+    "offset": [
+      5,
+      23
+    ],
+    "size": [
+      71,
+      36
+    ]
+  },
+  "credits": {
+    "title": "Marble Bust 01",
+    "author": "Rico Cilliers",
+    "license": "CC0-1.0",
+    "sourceUrl": "https://polyhaven.com/a/marble_bust_01"
+  }
+}
