@@ -79,9 +79,3 @@ export function oklchToLinear(c: Oklch): Vec3 {
 }
 
 /** Interpolación en OKLab (para gradientes del lado CPU). */
-export function mixOklab(a: Vec3, b: Vec3, t: number): Vec3 {
-  return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
-}
-
-/** Paleta de zona: nombre de color → OKLCH. Ver src/data/palettes.json. */
-export type ZonePalette = Record<string, Oklch>;

@@ -20,7 +20,7 @@ export interface Room {
   readonly map: Tilemap;
   /** piezas de escenario, ordenadas de atrás hacia delante */
   readonly props: PlacedProp[];
-  /** texturas fotográficas de los grupos de rocas */
+  /** rocas renderizadas de los grupos de rocas */
   readonly rockFills: RockFill[];
   /** posición en la cuadrícula del overworld */
   readonly gx: number;
@@ -90,8 +90,8 @@ export class World {
     let d = this.renderCache.get(room.meta.id);
     if (!d) {
       d = buildRenderData(room.map, room.seed);
-      // Las rocas con foto no se pintan como roca procedural (sin contorno, sombra
-      // ni recorte por tile): solo se ve la foto, con el contorno de la imagen.
+      // Las rocas se pintan con su roca renderizada (sin contorno, sombra ni recorte
+      // por tile): solo se ve la imagen, con su propio contorno.
       for (const r of room.rockFills) {
         for (let ty = r.ty0; ty <= r.ty1; ty++) {
           for (let tx = r.tx0; tx <= r.tx1; tx++) d.tileTex[(ty + HUD_TILE_ROWS) * SCREEN_TILES_W + tx] = TILE.prop;

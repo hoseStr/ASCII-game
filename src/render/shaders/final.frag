@@ -34,7 +34,7 @@ void main() {
     col = texelFetch(uScene, ivec2(local), 0).rgb;
   }
 
-  // Las piezas de escenario (alfa 0 en la escena) se muestran tal cual: la foto
+  // Las piezas de escenario (alfa 0 en la escena) se muestran tal cual: la imagen
   // convertida a ASCII, sin bloom, viñeta, aberración ni grano.
   vec4 sc = texelFetch(uScene, ivec2(local), 0);
   if (sc.a < 0.25) {

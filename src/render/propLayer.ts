@@ -49,7 +49,6 @@ interface Piece {
   ox: number;
   oy: number;
   flip: boolean;
-  flat: boolean;
   fps: number;
   phase: number;
   cur: number;
@@ -164,7 +163,6 @@ export class PropLayer {
         ox: r.tx0 * TILE_COLS * PROP_SX,
         oy: (HUD_ROWS + r.ty0 * TILE_ROWS) * PROP_SY,
         flip: false,
-        flat: r.def.shadow === 'flat',
         fps: 0,
         phase: 0,
         cur: 0,
@@ -181,7 +179,6 @@ export class PropLayer {
         ox: p.tx * TILE_COLS * PROP_SX,
         oy: (HUD_ROWS + p.ty * TILE_ROWS) * PROP_SY,
         flip: p.flip,
-        flat: p.def.shadow === 'flat',
         fps: asset.frames.length > 1 ? p.def.fps || 8 : 0,
         // fase por posición: dos plantas iguales no se mecen al unísono
         phase: ((p.tx * 7 + p.ty * 13) % 17) / 17,
@@ -192,7 +189,7 @@ export class PropLayer {
     for (const pc of pieces) {
       if (pc.shadow && !pc.flip) {
         this.blitShadow(pc.shadow, (pc.ox / PROP_SX) * SHADOW_S + pc.shadowX, (pc.oy / PROP_SY) * SHADOW_S + pc.shadowY);
-      } else this.castShadow(pc.frames[0]!, pc.ox, pc.oy, pc.flip, pc.flat);
+      } else this.castShadow(pc.frames[0]!, pc.ox, pc.oy, pc.flip);
     }
     this.blurShadow();
     for (const pc of pieces) {
@@ -326,21 +323,19 @@ export class PropLayer {
   /**
    * Sombra proyectada (piezas sin sombra renderizada o en espejo): cada muestra
    * opaca, a una altura h sobre la base del objeto, cae en el suelo desplazada
-   * h·(SHADOW_DIR_X, SHADOW_DIR_Y). Más oscura cerca de la base. Un objeto plano
-   * ('flat') solo deja una sombra corta bajo él. Se escribe en la rejilla de sombras.
+   * h·(SHADOW_DIR_X, SHADOW_DIR_Y). Más oscura cerca de la base. Se escribe en la
+   * rejilla de sombras.
    */
-  private castShadow(img: StampImage, ox: number, oy: number, flip: boolean, flat: boolean): void {
+  private castShadow(img: StampImage, ox: number, oy: number, flip: boolean): void {
     const totalH = img.h * IMG_SAMPLE_H;
     const baseRow = Math.floor(((oy + img.h) * SHADOW_S) / PROP_SY) - 1;
     for (let y = 0; y < img.h; y++) {
       const hUnits = (img.h - 1 - y) * IMG_SAMPLE_H; // altura sobre la base
-      const offX = flat ? 0.7 : hUnits * SHADOW_DIR_X;
-      const offY = flat ? 0.5 : hUnits * SHADOW_DIR_Y;
-      const strength = flat ? 0.6 : SHADOW_MAX * (1 - SHADOW_FADE * (hUnits / Math.max(totalH, 1e-3)));
-      // proyectada: todas las alturas caen sobre la línea de base; plana: bajo la silueta
-      const dy = (flat ? Math.floor(((oy + y) * SHADOW_S) / PROP_SY) : baseRow) + Math.round(offY * SHADOW_S);
+      const strength = SHADOW_MAX * (1 - SHADOW_FADE * (hUnits / Math.max(totalH, 1e-3)));
+      // todas las alturas caen sobre la línea de base, desplazadas según su altura
+      const dy = baseRow + Math.round(hUnits * SHADOW_DIR_Y * SHADOW_S);
       if (dy < 0 || dy >= SHADOW_H) continue;
-      const dxOff = Math.round(offX / SHADOW_SAMPLE_W);
+      const dxOff = Math.round((hUnits * SHADOW_DIR_X) / SHADOW_SAMPLE_W);
       for (let x = 0; x < img.w; x++) {
         const a = img.data[(y * img.w + (flip ? img.w - 1 - x : x)) * 4 + 3]!;
         if (a === 0) continue;

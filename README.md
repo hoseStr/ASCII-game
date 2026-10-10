@@ -172,7 +172,7 @@ Un modelo fotoescaneado tiene textura de foto, pero además da control total sob
 
 Por cada variante del modelo (un conjunto de rocas trae varias; `--only 1,2` elige cuáles) genera:
 
-- **Objeto.** El objeto con alfa limpio.
+- **Objeto.** El objeto con alfa limpio (en las plantas con viento, los fotogramas ocupan su lugar).
 - **Sombra.** Una pasada con *shadow catcher*: el objeto invisible para la cámara pero proyectando su sombra.
 - **Viento.** Con `--frames`, un bucle de viento: cada vértice se desplaza según su altura, y la base no se mueve.
 

@@ -17,7 +17,7 @@ uniform vec3 uPal[PAL_SIZE];
 uniform int uOctaves;
 uniform int uCliffSteps;   // 48 · límites uniform: bucles reales en D3D (compilación rápida)
 uniform int uOne;          // 1: radio de las vecindades 3×3
-uniform sampler2D uPropShadow; // sombra que proyectan las piezas (fotos y rocas) sobre el suelo
+uniform sampler2D uPropShadow; // sombra que proyectan las piezas (renders 3D y rocas) sobre el suelo
 
 layout(location = 0) out vec4 oTerrain;
 layout(location = 1) out vec4 oSurface;
@@ -151,24 +151,6 @@ void main() {
     if (s > 0.5) kind = float(K_SHORE);
   }
 
-  // --- rocas: bloques en vista 3/4 (cara superior clara, frente oscuro con estratos) ---
-  float rockD = typeSdf(p, T_ROCK, 0.0, 0.45) + edgeNoise * 0.25;
-  if (rockD < 0.0) {
-    float below = typeSdf(p + vec2(0.0, 1.3), T_ROCK, 0.0, 0.45) + edgeNoise * 0.25;
-    float strata = fbm(vec3(p.x * 1.8, p.y * 0.3, 13.0), 3);
-    if (below > 0.0) {
-      lab = mix(uPal[P_ROCK_FRONT], uPal[P_CLIFF_DEEP], 0.25 + 0.3 * smoothstep(-1.3, 0.0, -below));
-      lab.x += (strata - 0.5) * 0.2;
-      kind = float(K_ROCK_FRONT);
-    } else {
-      lab = uPal[P_ROCK];
-      lab.x += (fbm(vec3(p * 0.9, 17.0), 3) - 0.5) * 0.18 - 0.1 * smoothstep(-0.8, 0.0, rockD);
-      kind = float(K_ROCK);
-    }
-  } else if (rockD < 1.2) {
-    shadow = min(shadow, 0.55 + 0.45 * smoothstep(0.0, 1.2, rockD)); // contacto con el suelo
-  }
-
   // --- árboles: los tiles de árbol contiguos forman UNA masa de copas (un solo
   // contorno), algo elevada (vista 3/4); los troncos asoman en el borde sur ----------
   ivec2 tc = ivec2(floor(p / TILE_U));
@@ -210,7 +192,7 @@ void main() {
 
   // --- obstáculos: un único SDF (negativo dentro) para los contornos de tinta ----------
   float crystalD = typeSdf(p, T_CRYSTAL, 0.0, 0.6);
-  float obstacleD = min(min(min(rockD, waterD), min(canopyD, trunkD)), crystalD);
+  float obstacleD = min(min(waterD, min(canopyD, trunkD)), crystalD);
   if (obstacleD > 0.0 && obstacleD < 0.8 && kind != float(K_PATH)) {
     shadow = min(shadow, mix(0.45, 1.0, smoothstep(0.0, 0.8, obstacleD))); // anillo de sombra
   }
@@ -220,7 +202,7 @@ void main() {
   float bridgeD = min(typeSdf(p, T_BRIDGE_H, 0.0, 0.0), typeSdf(p, T_BRIDGE_V, 0.0, 0.0));
   if (bridgeD < 1.8) rim = -1.0;
 
-  // Sombra que proyectan los objetos fotográficos (render/propLayer.ts).
+  // Sombra que proyectan las piezas de escenario (render/propLayer.ts).
   shadow *= 1.0 - textureLod(uPropShadow, gl_FragCoord.xy / (uGrid * uSamples), 0.0).r;
 
   if (groundA <= 0.0 && kind != float(K_CANOPY)) kind = float(K_VOID);

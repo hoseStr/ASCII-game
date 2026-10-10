@@ -43,10 +43,6 @@ export interface GlyphAtlas {
   fontSizePx: number;
 }
 
-export function glyphIndexOrSpace(atlas: GlyphAtlas, ch: string): number {
-  return atlas.index.get(ch) ?? 0;
-}
-
 const PROCEDURAL = new Set(Array.from(PROCEDURAL_GLYPHS));
 /** desborde tolerado (px) antes de encajar el glifo escalándolo */
 const FIT_TOLERANCE_PX = 0.75;

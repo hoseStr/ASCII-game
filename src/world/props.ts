@@ -20,10 +20,10 @@ export interface StampDef {
   samples: [number, number];
   solid: boolean;
   /**
-   * sombra sobre el suelo: 'cast' proyecta la silueta, 'flat' es una sombra corta
-   * (objetos planos) y 'render' usa la sombra real renderizada en el estudio
+   * sombra sobre el suelo: 'render' usa la sombra real renderizada en el estudio;
+   * 'cast' proyecta la silueta (piezas sin sombra renderizada)
    */
-  shadow: 'cast' | 'flat' | 'render';
+  shadow: 'cast' | 'render';
   /** huella por tile, de arriba abajo: '#' sólido, '.' libre */
   footprint: string[];
   /** fotogramas de animación (tira vertical en la imagen); 1 = estática */
@@ -157,7 +157,7 @@ export function rockClusters(map: Tilemap): Array<{ tx0: number; ty0: number; tx
   return out;
 }
 
-/** Tamaño máximo (en tiles) de una roca fotográfica: más grande se deformaría. */
+/** Tamaño máximo (en tiles) de una roca renderizada: más grande se deformaría. */
 export const ROCK_RECT_MAX_W = 3;
 export const ROCK_RECT_MAX_H = 2;
 
@@ -194,7 +194,7 @@ export function rockRects(map: Tilemap): Array<{ tx0: number; ty0: number; tx1: 
 const ROCK_ASPECT_TOLERANCE = 0.35;
 
 /**
- * Cada rectángulo de roca toma una roca recortada (foto o render) de las
+ * Cada rectángulo de roca toma una roca renderizada recortada de las
  * permitidas en la zona: entre las variantes cuya proporción se parece a la del
  * rectángulo, una elegida por hash (determinista), para que no se repitan.
  * La imagen se estira al rectángulo; su contorno es el de la propia imagen.

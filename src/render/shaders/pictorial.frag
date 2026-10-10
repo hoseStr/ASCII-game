@@ -164,8 +164,8 @@ void main() {
   } else if (groundA > 0.0 && kind != K_VOID) {
     vec3 lab = surf.xyz;
     if (kind == K_GROUND) lab = mix(lab, uPal[P_RIM], max(ex.x, 0.0) * 0.55);
-    // Las copas y la roca reciben más cielo que el suelo del bosque; los frentes, menos.
-    float face = kind == K_CANOPY ? 1.5 : kind == K_ROCK ? 1.12 : (kind == K_ROCK_FRONT || kind == K_TRUNK ? 0.7 : 1.0);
+    // Las copas reciben más cielo que el suelo del bosque; los troncos, menos.
+    float face = kind == K_CANOPY ? 1.5 : kind == K_TRUNK ? 0.7 : 1.0;
     col = mix(col, oklabToLinear(lab) * lightSum * face, groundA);
   }
 
@@ -219,7 +219,7 @@ void main() {
     mat = float(MAT_VEG);
     if (kind == K_WATER) mat = float(MAT_WATER);
     else if (kind == K_CANOPY) mat = float(MAT_FOLIAGE);
-    else if (kind == K_ROCK || kind == K_ROCK_FRONT || kind == K_TRUNK) mat = float(MAT_BASE);
+    else if (kind == K_TRUNK) mat = float(MAT_BASE);
     else if (kind == K_PATH || kind == K_SHORE) mat = float(MAT_PATH);
     else if (kind == K_FLOWER) mat = float(MAT_FLOWER);
   }

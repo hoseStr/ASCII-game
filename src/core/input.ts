@@ -31,7 +31,6 @@ const DEBUG_KEYS = new Set(['F3', 'F4']);
 
 const DEADZONE = 0.3;
 
-export const DIR_NONE = 0;
 export const DIR_UP = 1;
 export const DIR_DOWN = 2;
 export const DIR_LEFT = 3;

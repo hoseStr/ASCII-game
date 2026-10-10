@@ -14,7 +14,7 @@ Si el archivo trae varias variantes (conjuntos de rocas, matas…), renderiza ca
 objeto raíz por separado.
 
 Por cada variante escribe en --out:
-  <n>.png          el objeto con alfa (fondo transparente)
+  <n>.png          el objeto con alfa (fondo transparente); sin viento
   <n>.shadow.png   su sombra sobre el suelo (pasada con shadow catcher, el objeto
                    invisible para la cámara pero proyectando sombra), mismo encuadre
   <n>_f00.png…     con --frames: bucle de viento (la planta se mece, la base fija;
@@ -234,8 +234,10 @@ def main():
         mpp = size / max(res_x, res_y)  # metros por píxel (ortográfica)
         name = f"v{vi}"
 
-        # pasada 1: objeto con alfa
-        render_to(os.path.join(args.out, f"{name}.png"))
+        frames = max(0, args.frames)
+        # pasada 1: objeto con alfa (con viento no hace falta: los fotogramas lo sustituyen)
+        if frames <= 1:
+            render_to(os.path.join(args.out, f"{name}.png"))
 
         # pasada 2: sombra (plano shadow catcher; el objeto invisible para la cámara)
         plane = add_shadow_catcher(scene, lo, hi)
@@ -248,7 +250,6 @@ def main():
 
         # pasada 3 (opcional): bucle de viento. Cada vértice se desplaza en
         # horizontal según su altura (la base no se mueve, la punta sí).
-        frames = max(0, args.frames)
         if frames > 1:
             height = max(hi.z - lo.z, 1e-3)
             width = max(hi.x - lo.x, 1e-3)

@@ -26,7 +26,6 @@ export const TILE = {
 export type TileName = keyof typeof TILE;
 export type TileId = (typeof TILE)[TileName];
 
-export const TILE_NAMES = Object.keys(TILE) as TileName[];
 
 export interface TileProps {
   walkable: boolean;

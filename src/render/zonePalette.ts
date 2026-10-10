@@ -24,8 +24,6 @@ export const PALETTE_SLOTS = [
   'ambient',
   'water',
   'waterDeep',
-  'rock',
-  'rockFront',
   'canopy',
   'canopyDark',
   'trunk',
@@ -61,10 +59,6 @@ export interface ZonePaletteGpu {
 }
 
 const zones = palettesJson as unknown as Record<string, ZoneData>;
-
-export function zoneNames(): string[] {
-  return Object.keys(zones);
-}
 
 export function loadZonePalette(id: string): ZonePaletteGpu {
   const z = zones[id];
