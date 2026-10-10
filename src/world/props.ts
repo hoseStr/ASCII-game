@@ -41,6 +41,8 @@ export interface PropPlacement {
   stamp: string;
   tile: [number, number];
   flip?: boolean;
+  /** pieza héroe de la sala: el punto focal (una por sala, ver docs/composicion.md) */
+  hero?: boolean;
 }
 
 export interface PlacedProp {

@@ -26,7 +26,7 @@ export interface RoomMeta {
   zone: string;
   map: string;
   fireflies?: number;
-  /** piezas de escenario (estampas fotográficas); ver src/world/props.ts */
+  /** piezas de escenario (renders 3D); ver src/world/props.ts y docs/composicion.md */
   props?: PropPlacement[];
 }
 

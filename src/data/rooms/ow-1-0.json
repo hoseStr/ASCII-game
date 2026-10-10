@@ -6,17 +6,18 @@
   "fireflies": 10,
   "props": [
     {
-      "stamp": "bust",
-      "tile": [
-        6,
-        8
-      ]
-    },
-    {
       "stamp": "statue",
       "tile": [
+        14,
+        2
+      ],
+      "hero": true
+    },
+    {
+      "stamp": "bust",
+      "tile": [
         23,
-        8
+        9
       ]
     }
   ]

@@ -8,22 +8,30 @@
     {
       "stamp": "rock-block",
       "tile": [
-        6,
-        7
-      ]
+        18,
+        9
+      ],
+      "hero": true
     },
     {
-      "stamp": "calathea-1",
+      "stamp": "anthurium-2",
       "tile": [
         14,
-        10
+        9
       ]
     },
     {
       "stamp": "fern-2",
       "tile": [
-        18,
-        5
+        22,
+        9
+      ]
+    },
+    {
+      "stamp": "fern-3",
+      "tile": [
+        5,
+        4
       ]
     }
   ]

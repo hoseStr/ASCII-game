@@ -6,18 +6,42 @@
   "fireflies": 14,
   "props": [
     {
+      "stamp": "bust",
+      "tile": [
+        12,
+        2
+      ],
+      "hero": true
+    },
+    {
       "stamp": "leipoldtia",
       "tile": [
-        7,
+        19,
+        4
+      ]
+    },
+    {
+      "stamp": "leipoldtia",
+      "tile": [
+        19,
         8
+      ],
+      "flip": true
+    },
+    {
+      "stamp": "gazania",
+      "tile": [
+        8,
+        2
       ]
     },
     {
       "stamp": "gazania",
       "tile": [
         14,
-        8
-      ]
+        2
+      ],
+      "flip": true
     }
   ]
 }

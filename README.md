@@ -85,7 +85,15 @@ Los tests garantizan tres propiedades del mundo:
 
 3. **Colócala** en la cuadrícula de `src/data/world.json`.
 4. **Conéctala.** Las salidas se deducen solas: si dos salas son vecinas y sus bordes tienen tiles caminables en las mismas posiciones, hay paso. Usa `=` o `H` para tender un puente sobre el vacío hasta el borde.
-5. **Valídala** con `npm test`, que comprueba tamaño, leyenda, simetría de bordes y alcanzabilidad.
+5. **Compón el decorado** siguiendo [la guía de composición](docs/composicion.md):
+   - una pieza héroe por sala, marcada con `"hero": true`;
+   - grupos, no dispersión;
+   - todo anclado al terreno;
+   - caminos y salidas despejados;
+   - simetría solo en lo construido.
+6. **Valídala** con `npm test`. Comprueba:
+   - tamaño, leyenda, simetría de bordes y alcanzabilidad;
+   - las reglas medibles de la composición: nada en el vacío, sin rocas sueltas, un héroe, caminos y salidas libres, sala cruzable.
 
 ### Sprites
 
@@ -200,7 +208,7 @@ Por cada variante del modelo (un conjunto de rocas trae varias; `--only 1,2` eli
    - la sección de créditos.
 
    Los renders de `art/renders/` se versionan, así que regenerar las estampas no requiere Blender.
-5. **Colócala** en una sala: `"props": [{ "stamp": "<id>", "tile": [x, y], "flip": false }]`, con `tile` como esquina superior izquierda.
+5. **Colócala** en una sala: `"props": [{ "stamp": "<id>", "tile": [x, y], "flip": false }]`, con `tile` como esquina superior izquierda. Añade `"hero": true` si es el punto focal de la sala, y sigue [la guía de composición](docs/composicion.md).
 6. **Valida** con `npm test` y `npm run verify:stamps`. Los tests comprueban:
    - licencias, tamaños, huellas, fotogramas y sombras;
    - que el port de TypeScript reproduce al 100 % la vista previa literal del repo;
@@ -309,7 +317,8 @@ src/
   data/                  salas (.txt + .json), mundo, leyenda, paletas, sprites, estampas (generadas)
   assets/stamps/         estampas procesadas (PNG de 4 muestras por celda)
 art/                     renders del estudio (modelos CC0), manifiesto de licencias y definición de estampas
-tests/                   fidelidad dorada, fuente, legibilidad, núcleo, layout, mundo, colisión, sistemas, estampas
+docs/                    guía de composición de escenarios
+tests/                   fidelidad dorada, fuente, legibilidad, núcleo, layout, mundo, colisión, sistemas, estampas, conversión, animación, composición
 tools/                   make_golden.py (fixtures), polyhaven.py y render_studio.py (estudio de render), make_stamps.py (estampas), screenshot.mjs (capturas), verify_stamps.mjs
 ```
 

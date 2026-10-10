@@ -8,28 +8,36 @@
     {
       "stamp": "anthurium-1",
       "tile": [
-        22,
-        6
-      ]
+        18,
+        3
+      ],
+      "hero": true
     },
     {
-      "stamp": "calathea-2",
+      "stamp": "fern-1",
       "tile": [
-        5,
-        6
+        8,
+        4
       ]
     },
     {
       "stamp": "fern-2",
       "tile": [
-        18,
-        10
+        12,
+        5
       ]
     },
     {
-      "stamp": "fern-1",
+      "stamp": "calathea-2",
       "tile": [
-        10,
+        9,
+        9
+      ]
+    },
+    {
+      "stamp": "fern-3",
+      "tile": [
+        6,
         9
       ],
       "flip": true

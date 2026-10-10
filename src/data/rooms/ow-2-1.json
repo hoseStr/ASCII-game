@@ -8,22 +8,23 @@
     {
       "stamp": "rock-tall",
       "tile": [
-        5,
-        5
-      ]
+        4,
+        4
+      ],
+      "hero": true
     },
     {
       "stamp": "pad-1",
       "tile": [
-        10,
+        13,
         4
       ]
     },
     {
       "stamp": "pad-2",
       "tile": [
-        13,
-        8
+        10,
+        6
       ],
       "flip": true
     }
