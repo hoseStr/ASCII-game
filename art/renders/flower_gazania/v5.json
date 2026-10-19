@@ -1,9 +1,9 @@
 {
   "variant": "v5",
   "object": "flower_gazania_f_LOD0",
-  "metersPerPixel": 0.002380606493353844,
+  "metersPerPixel": 0.002863077664375305,
   "size": [
-    291,
+    295,
     300
   ],
   "bboxMeters": [
@@ -15,5 +15,17 @@
   "elevationDeg": 50.0,
   "exposure": 1.0,
   "fill": 1.2,
-  "rim": 2.5
+  "rim": 2.5,
+  "studio": {
+    "res": 300,
+    "samples": 32,
+    "wind": 0.18,
+    "wave": 0.5,
+    "clip": 0.0
+  },
+  "form": {
+    "lightRef": 8.0,
+    "occlusionRef": 64.0,
+    "creaseRef": 90.0
+  }
 }

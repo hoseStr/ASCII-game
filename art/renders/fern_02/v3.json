@@ -1,10 +1,10 @@
 {
   "variant": "v3",
   "object": "fern_02_d",
-  "metersPerPixel": 0.0025756136238574982,
+  "metersPerPixel": 0.0027742414951324465,
   "size": [
-    292,
-    300
+    300,
+    274
   ],
   "bboxMeters": [
     0.5727821886539459,
@@ -15,5 +15,17 @@
   "elevationDeg": 50.0,
   "exposure": 1.0,
   "fill": 1.2,
-  "rim": 2.5
+  "rim": 2.5,
+  "studio": {
+    "res": 300,
+    "samples": 32,
+    "wind": 0.18,
+    "wave": 0.5,
+    "clip": 0.0
+  },
+  "form": {
+    "lightRef": 8.0,
+    "occlusionRef": 64.0,
+    "creaseRef": 90.0
+  }
 }

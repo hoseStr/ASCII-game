@@ -4,7 +4,7 @@
   "metersPerPixel": 0.006381216406822205,
   "size": [
     360,
-    281
+    294
   ],
   "bboxMeters": [
     1.6930084824562073,
@@ -15,5 +15,17 @@
   "elevationDeg": 50.0,
   "exposure": 1.0,
   "fill": 1.2,
-  "rim": 2.5
+  "rim": 2.5,
+  "studio": {
+    "res": 360,
+    "samples": 32,
+    "wind": 0.1,
+    "wave": 0.5,
+    "clip": 0.0
+  },
+  "form": {
+    "lightRef": 8.0,
+    "occlusionRef": 64.0,
+    "creaseRef": 90.0
+  }
 }

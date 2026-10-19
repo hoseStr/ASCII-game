@@ -1,9 +1,9 @@
 {
   "variant": "v1",
   "object": "calathea_orbifolia_01_b",
-  "metersPerPixel": 0.002237750108043353,
+  "metersPerPixel": 0.0025062502364317576,
   "size": [
-    256,
+    275,
     300
   ],
   "bboxMeters": [
@@ -15,5 +15,17 @@
   "elevationDeg": 50.0,
   "exposure": 1.0,
   "fill": 1.2,
-  "rim": 2.5
+  "rim": 2.5,
+  "studio": {
+    "res": 300,
+    "samples": 32,
+    "wind": 0.18,
+    "wave": 0.5,
+    "clip": 0.0
+  },
+  "form": {
+    "lightRef": 8.0,
+    "occlusionRef": 64.0,
+    "creaseRef": 90.0
+  }
 }

@@ -1,9 +1,9 @@
 {
   "variant": "v0",
   "object": "rock_moss_set_01_rock01",
-  "metersPerPixel": 0.012680086308055456,
+  "metersPerPixel": 0.012500816053814357,
   "size": [
-    265,
+    269,
     360
   ],
   "bboxMeters": [
@@ -15,5 +15,17 @@
   "elevationDeg": 50.0,
   "exposure": 1.0,
   "fill": 1.2,
-  "rim": 2.5
+  "rim": 2.5,
+  "studio": {
+    "res": 360,
+    "samples": 32,
+    "wind": 0.1,
+    "wave": 0.5,
+    "clip": 0.0
+  },
+  "form": {
+    "lightRef": 8.0,
+    "occlusionRef": 64.0,
+    "creaseRef": 90.0
+  }
 }

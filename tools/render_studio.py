@@ -15,24 +15,40 @@ objeto raíz por separado.
 
 Por cada variante escribe en --out:
   <n>.png          el objeto con alfa (fondo transparente); sin viento
+  <n>.form.png     la forma del modelo 3D en el mismo encuadre (ver write_form)
   <n>.shadow.png   su sombra sobre el suelo (pasada con shadow catcher, el objeto
                    invisible para la cámara pero proyectando sombra), mismo encuadre
   <n>_f00.png…     con --frames: bucle de viento (la planta se mece, la base fija;
-                   la ráfaga recorre la planta de izquierda a derecha)
-  <n>.json         metros por píxel, tamaño y número de fotogramas
+                   la ráfaga recorre la planta de izquierda a derecha), cada
+                   fotograma con su <n>_f00.form.png
+  <n>.json         metros por píxel, tamaño, número de fotogramas y parámetros
 """
 import argparse
 import json
 import math
 import os
+import shutil
+import struct
 import sys
+import tempfile
+import zlib
 
 import bpy
+import numpy as np
 from mathutils import Vector
 
 ELEVATION_DEG = 50.0  # cámara: grados sobre el horizonte
 SUN_ELEVATION_DEG = 48.0
 SUN_SCREEN_DIR = Vector((-1.0, 1.0))  # el sol viene de arriba a la izquierda de la pantalla
+
+# Pasadas de forma (form.png): escalas de codificación. Cada canal guarda
+# sqrt(valor / escala) en 8 bits, así hay más precisión en lo bajo (umbral en make_stamps).
+FORM_PASSES = ("depth", "normal", "diffdir", "diffind", "transdir", "transind")
+LIGHT_REF = 8.0  # irradiancia que pasa a 255 (sol 4,2 + relleno + contorno + cielo)
+OCCLUSION_REF = 64.0  # salto de profundidad (en píxeles de render) que pasa a 255
+CREASE_REF = 90.0  # ángulo entre normales vecinas (grados) que pasa a 255
+CREASE_BLUR = 1.5  # suavizado de la normal (píxeles de render) antes de medir los pliegues
+CREASE_SPAN = 2  # los pliegues se miden entre p − 2 y p + 2
 
 
 def parse_args():
@@ -74,6 +90,160 @@ def reset_scene(exposure):
     bg.inputs[1].default_value = 0.55
     scene.world = world
     return scene
+
+
+def setup_form_passes(scene, tmp_dir):
+    """
+    Pasadas del modelo 3D para la forma: profundidad, normal y luz difusa y
+    transmitida SIN el color de la textura (Cycles separa luz y color). El
+    compositor las escribe en EXR (flotante, sin gestión de color) en tmp_dir;
+    write_form las resume en form.png. Devuelve el nodo de salida (se silencia
+    en la pasada de sombra).
+    """
+    vl = scene.view_layers[0]
+    vl.use_pass_z = True
+    vl.use_pass_normal = True
+    vl.use_pass_diffuse_direct = True
+    vl.use_pass_diffuse_indirect = True
+    vl.use_pass_transmission_direct = True
+    vl.use_pass_transmission_indirect = True
+    vl.pass_alpha_threshold = 0.5  # hojas recortadas por alfa: la pasada ve la hoja, no el hueco
+    scene.use_nodes = True
+    tree = scene.node_tree
+    tree.nodes.clear()
+    rl = tree.nodes.new("CompositorNodeRLayers")
+    comp = tree.nodes.new("CompositorNodeComposite")
+    tree.links.new(rl.outputs["Image"], comp.inputs["Image"])
+    out = tree.nodes.new("CompositorNodeOutputFile")
+    out.base_path = tmp_dir
+    out.format.file_format = "OPEN_EXR"
+    out.format.color_depth = "32"
+    out.format.color_mode = "RGB"
+    out.file_slots.clear()
+    sockets = {"depth": "Depth", "normal": "Normal", "diffdir": "DiffDir", "diffind": "DiffInd", "transdir": "TransDir", "transind": "TransInd"}
+    for name in FORM_PASSES:
+        out.file_slots.new(f"{name}_")
+        tree.links.new(rl.outputs[sockets[name]], out.inputs[f"{name}_"])
+    return out
+
+
+def normal_detail(objs, saved=None):
+    """
+    Apaga (saved = None) o restaura los mapas de normales y de relieve de los
+    materiales: las pasadas de forma ven la geometría del modelo, no el relieve
+    fino del escaneo (que en ASCII solo sería ruido). Devuelve lo guardado.
+    """
+    if saved is not None:
+        for sock, v in saved:
+            sock.default_value = v
+        return None
+    saved = []
+    mats = {s.material for o in objs for s in o.material_slots if s.material and s.material.use_nodes}
+    for mat in mats:
+        for node in mat.node_tree.nodes:
+            name = {"ShaderNodeNormalMap": "Strength", "ShaderNodeBump": "Strength"}.get(node.bl_idname)
+            if name:
+                sock = node.inputs[name]
+                saved.append((sock, sock.default_value))
+                sock.default_value = 0.0
+    return saved
+
+
+def render_form(path, tmp_dir, objs, form_out, cam, mpp):
+    """Segundo render del mismo fotograma, sin relieve fino, solo para las pasadas de forma."""
+    saved = normal_detail(objs)
+    form_out.mute = False
+    bpy.ops.render.render(write_still=False)
+    form_out.mute = True
+    normal_detail(objs, saved)
+    write_form(path, tmp_dir, cam, mpp)
+
+
+def read_exr(path):
+    """EXR del compositor → array (alto, ancho, 3) de arriba abajo, sin conversión de color."""
+    img = bpy.data.images.load(path, check_existing=False)
+    img.colorspace_settings.is_data = True
+    w, h = img.size
+    buf = np.empty(w * h * 4, dtype=np.float32)
+    img.pixels.foreach_get(buf)
+    bpy.data.images.remove(img)
+    return buf.reshape(h, w, 4)[::-1, :, :3].astype(np.float64)
+
+
+def write_png_rgb(path, rgb):
+    """PNG RGB de 8 bits sin perfiles de color (los canales son datos, no colores)."""
+    h, w, _ = rgb.shape
+    raw = b"".join(b"\x00" + rgb[y].tobytes() for y in range(h))
+
+    def chunk(tag, data):
+        return struct.pack(">I", len(data)) + tag + data + struct.pack(">I", zlib.crc32(tag + data) & 0xFFFFFFFF)
+
+    with open(path, "wb") as f:
+        f.write(b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(">IIBBBBB", w, h, 8, 2, 0, 0, 0)) + chunk(b"IDAT", zlib.compress(raw, 9)) + chunk(b"IEND", b""))
+
+
+def encode(v, ref):
+    return np.round(255.0 * np.sqrt(np.clip(v / ref, 0.0, 1.0))).astype(np.uint8)
+
+
+def blur(img, sigma):
+    """Desenfoque gaussiano separable (numpy puro: el Python de Blender no trae OpenCV)."""
+    r = max(1, int(3 * sigma))
+    k = np.exp(-0.5 * (np.arange(-r, r + 1) / sigma) ** 2)
+    k /= k.sum()
+    out = img
+    for axis in (0, 1):
+        pad = [(0, 0)] * out.ndim
+        pad[axis] = (r, r)
+        src = np.pad(out, pad, mode="edge")
+        acc = np.zeros_like(out)
+        for i, w in enumerate(k):
+            acc += w * np.take(src, range(i, i + out.shape[axis]), axis=axis)
+        out = acc
+    return out
+
+
+def write_form(path, tmp_dir, cam, mpp):
+    """
+    Resume las pasadas del modelo 3D en un PNG RGB del mismo encuadre que el render:
+      R  luz: irradiancia difusa + transmitida, sin la textura (el sombreado de la forma)
+      G  aristas de oclusión: la superficie de delante en un salto de profundidad
+         (curvatura de la profundidad, en píxeles de render: una pendiente suave da 0)
+      B  pliegues: giro (grados) de la normal suavizada a ambos lados del píxel
+    Se llama tras render_form: el modelo sin mapas de normales ni relieve, así todo
+    esto describe su geometría. Fuera del objeto todo es 0. Los canales guardan
+    sqrt(valor / escala).
+    """
+    frame = bpy.context.scene.frame_current
+    p = {name: read_exr(os.path.join(tmp_dir, f"{name}_{frame:04d}.exr")) for name in FORM_PASSES}
+    z = p["depth"][..., 0]
+    inside = z < 1e9
+    lum = np.array([0.2126, 0.7152, 0.0722])
+    light = (p["diffdir"] + p["diffind"] + p["transdir"] + p["transind"]) @ lum
+
+    zz = np.where(inside, z, np.nan) / mpp
+    occ = np.zeros_like(zz)
+    for axis in (0, 1):
+        a = np.roll(zz, 1, axis)
+        b = np.roll(zz, -1, axis)
+        lap = a + b - 2 * zz  # > 0: este píxel está por delante de sus vecinos (borde que ocluye)
+        occ = np.fmax(occ, np.nan_to_num(lap, nan=0.0))
+
+    # La normal de Cycles trae el relieve fino del mapa de normales: se suaviza
+    # (sin mezclar el fondo) y se mide el giro entre p−2 y p+2: aristas, no textura.
+    m = inside.astype(np.float64)
+    n = blur(p["normal"] * m[..., None], CREASE_BLUR) / np.maximum(blur(m, CREASE_BLUR)[..., None], 1e-6)
+    n = n / np.maximum(np.linalg.norm(n, axis=-1, keepdims=True), 1e-6)
+    crease = np.zeros(z.shape)
+    for axis in (0, 1):
+        a, b = np.roll(n, CREASE_SPAN, axis), np.roll(n, -CREASE_SPAN, axis)
+        ok = inside & np.roll(inside, CREASE_SPAN, axis) & np.roll(inside, -CREASE_SPAN, axis)
+        ang = np.degrees(np.arccos(np.clip((a * b).sum(-1), -1.0, 1.0)))
+        crease = np.where(ok, np.maximum(crease, ang), crease)
+
+    rgb = np.dstack([encode(light, LIGHT_REF), encode(occ, OCCLUSION_REF), encode(crease, CREASE_REF)])
+    rgb[~inside] = 0
+    write_png_rgb(path, np.ascontiguousarray(rgb))
 
 
 def mesh_roots():
@@ -142,7 +312,10 @@ def setup_camera_and_sun(scene, lo, hi, fill=0.0, rim=0.0):
     if rim > 0:
         add_shadowless_sun(scene, "contorno", Vector((0.0, 1.0, 0.55)), rim)
 
-    # encuadre: el objeto y su sombra en el suelo (proyección de las esquinas a lo largo del sol)
+    # encuadre: el objeto y su sombra en el suelo (proyección de las esquinas a lo largo del sol).
+    # La matriz de la cámara recién colocada no existe hasta evaluar la escena: sin esto se
+    # proyectaba con la identidad (la planta del objeto, sin su altura) y lo alto se cortaba.
+    bpy.context.view_layer.update()
     pts = []
     for x in (lo.x, hi.x):
         for y in (lo.y, hi.y):
@@ -184,6 +357,9 @@ def main():
     args.out = os.path.abspath(args.out)
     os.makedirs(args.out, exist_ok=True)
     scene = reset_scene(args.exposure)
+    tmp_dir = tempfile.mkdtemp(prefix="estudio-")
+    form_out = setup_form_passes(scene, tmp_dir)
+    form_out.mute = True  # solo escribe en render_form
     bpy.ops.import_scene.gltf(filepath=os.path.abspath(args.model))
     roots = mesh_roots()
     print(f"[estudio] {len(roots)} variante(s): {[r.name for r in roots]}")
@@ -223,7 +399,11 @@ def main():
         for o in list(scene.objects):
             if o.type in ("CAMERA", "LIGHT") or o.name.startswith("Plane"):
                 bpy.data.objects.remove(o, do_unlink=True)
-        cam, sun, w, h, size = setup_camera_and_sun(scene, lo, hi, args.fill, args.rim)
+        # con viento, el encuadre deja sitio al vaivén (la punta se desplaza hasta wind·alto)
+        sway = args.wind * (hi.z - lo.z) if args.frames > 1 else 0.0
+        frame_lo = lo - Vector((sway, 0.35 * sway, 0.0))
+        frame_hi = hi + Vector((sway, 0.35 * sway, 0.0))
+        cam, sun, w, h, size = setup_camera_and_sun(scene, frame_lo, frame_hi, args.fill, args.rim)
         aspect = w / h
         res_x = args.res if aspect >= 1 else max(8, round(args.res * aspect))
         res_y = args.res if aspect < 1 else max(8, round(args.res / aspect))
@@ -235,9 +415,10 @@ def main():
         name = f"v{vi}"
 
         frames = max(0, args.frames)
-        # pasada 1: objeto con alfa (con viento no hace falta: los fotogramas lo sustituyen)
+        # pasada 1: objeto con alfa y su forma (con viento no hace falta: los fotogramas lo sustituyen)
         if frames <= 1:
             render_to(os.path.join(args.out, f"{name}.png"))
+            render_form(os.path.join(args.out, f"{name}.form.png"), tmp_dir, objs, form_out, cam, mpp)
 
         # pasada 2: sombra (plano shadow catcher; el objeto invisible para la cámara)
         plane = add_shadow_catcher(scene, lo, hi)
@@ -278,6 +459,7 @@ def main():
                     o.data.vertices.foreach_set("co", new)
                     o.data.update()
                 render_to(os.path.join(args.out, f"{name}_f{k:02d}.png"))
+                render_form(os.path.join(args.out, f"{name}_f{k:02d}.form.png"), tmp_dir, objs, form_out, cam, mpp)
             for o, co in zip(objs, originals):
                 o.data.vertices.foreach_set("co", co)
                 o.data.update()
@@ -293,11 +475,14 @@ def main():
             "exposure": args.exposure,
             "fill": args.fill,
             "rim": args.rim,
+            "studio": {"res": args.res, "samples": args.samples, "wind": args.wind, "wave": args.wave, "clip": args.clip},
+            "form": {"lightRef": LIGHT_REF, "occlusionRef": OCCLUSION_REF, "creaseRef": CREASE_REF},
         }
         with open(os.path.join(args.out, f"{name}.json"), "w", encoding="utf-8", newline="\n") as f:
             json.dump(meta, f, indent=2)
         summary.append(meta)
         root.location -= offset
+    shutil.rmtree(tmp_dir, ignore_errors=True)
     print("[estudio] listo:", json.dumps(summary))
 
 
