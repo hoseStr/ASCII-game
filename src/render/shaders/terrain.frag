@@ -5,7 +5,8 @@
 //
 // Salida 0: sdf de la isla deshilachado, t del acantilado (<0 = no hay), L del acantilado, alfa del suelo
 // Salida 1: albedo en OKLab (L, a, b), tipo de superficie (K_*)
-// Salida 2: borde plateado, sombra (1 = sin sombra), profundidad del agua, —
+// Salida 2: borde plateado, sombra (1 = sin sombra), profundidad del agua (−1 = camino:
+//           la composición lo empiedra), SDF de los obstáculos
 // ---------------------------------------------------------------------------
 
 uniform vec2 uGrid;
@@ -206,6 +207,7 @@ void main() {
   shadow *= 1.0 - textureLod(uPropShadow, gl_FragCoord.xy / (uGrid * uSamples), 0.0).r;
 
   if (groundA <= 0.0 && kind != float(K_CANOPY)) kind = float(K_VOID);
+  if (kind == float(K_PATH)) waterDepth = -1.0; // marca para los adoquines (compose.frag)
 
   oTerrain = vec4(sdf, cliffT, cliffL, groundA);
   oSurface = vec4(lab, kind);

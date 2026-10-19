@@ -14,7 +14,7 @@ import type { RampDirection } from './ascii';
 import { buildAtlas, type GlyphAtlas } from './atlas';
 import type { CellBuffer } from './cellBuffer';
 import { Program, RenderTarget, bindTex, createTexture, formats, type GL, type TexFormat } from './gl';
-import { EDGE_GLYPHS, MATERIALS, glyphIndex } from './glyphs';
+import { EDGE_GLYPHS, MATERIALS, PAVE_GLYPHS, glyphIndex } from './glyphs';
 import { GpuTimer } from './gpuTimer';
 import { SHADOW_H, SHADOW_W } from './propLayer';
 import { PROP_FILL } from './stampConvert';
@@ -515,6 +515,8 @@ export class Renderer {
     bindTex(gl, p, 'uSnapState', 10, this.snapshot.textures[3]!);
     bindTex(gl, p, 'uTerrainTex', 11, terrain.textures[0]!);
     bindTex(gl, p, 'uExtraTex', 12, terrain.textures[2]!);
+    gl.uniform1i(p.u('uPaving'), s.fidelity ? 0 : 1);
+    gl.uniform1uiv(p.u('uPaveGlyph'), PAVE_GLYPH_IDS);
     gl.uniform1i(p.u('uEdges'), s.fidelity || !s.edges ? 0 : 1);
     bindTex(gl, p, 'uPropCell', 13, this.propCellTex);
     bindTex(gl, p, 'uPropBase', 14, this.propBaseTex);
@@ -744,6 +746,9 @@ function createNoiseTexture(gl: GL): WebGLTexture {
 
 /** Glifos de contorno (─ │ / \) como índices del atlas, para el uniform. */
 const EDGE_GLYPH_IDS = Uint32Array.from(EDGE_GLYPHS, (g) => glyphIndex(g));
+
+/** Juntas de los adoquines (_ |) como índices del atlas. */
+const PAVE_GLYPH_IDS = Uint32Array.from(PAVE_GLYPHS, (g) => glyphIndex(g));
 
 /** Arrays constantes para drawBuffers (evita crear arrays por fotograma). */
 const GL_NONE = 0;

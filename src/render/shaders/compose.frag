@@ -48,6 +48,9 @@ uniform highp sampler2D uSnapState;
 uniform highp sampler2D uTerrainTex; // .x = SDF de la costa (negativo dentro de la isla)
 uniform highp sampler2D uExtraTex;   // .w = SDF de los obstáculos (negativo dentro)
 uniform int uEdges;                  // 1 = dibujar contornos
+// adoquines de los caminos (uExtraTex.z < 0 marca el camino, ver terrain.frag)
+uniform int uPaving;                 // 1 = los caminos se empiedran (0 en modo fidelidad)
+uniform uint uPaveGlyph[2];          // _ |
 // piezas de escenario: renders 3D ya convertidos a ASCII en CPU (render/stampConvert.ts)
 uniform highp usampler2D uPropCell;  // rgb + posición en la rampa (+1; 0 = sin pieza)
 uniform highp usampler2D uPropBase;  // r = fila de base (+1; 0 = ninguna), g = cobertura de la silueta
@@ -99,6 +102,16 @@ uint edgeGlyph(float l, float r, float u, float d) {
   if (ay < ax * 0.42) return uEdgeGlyph[1];
   if (ax < ay * 0.42) return uEdgeGlyph[0];
   return g.x * g.y > 0.0 ? uEdgeGlyph[2] : uEdgeGlyph[3];
+}
+
+// Adoquines: hiladas de una fila, piedras de PAVE_LEN celdas a matajunta (cada
+// hilada desplazada media piedra). Celdas de pantalla: el empedrado no se mueve.
+const int PAVE_LEN = 4;
+const float PAVE_FACE = 0.3;   // cara de la piedra: mezcla del papel hacia el color del camino
+const float PAVE_JOINT = 0.85; // la junta: un trazo claro, como la tinta del resto del mundo
+
+bool pathAt(ivec2 c) {
+  return texelFetch(uExtraTex, c * uS + uS / 2, 0).z < -0.5;
 }
 
 float sdfAt(ivec2 c, ivec2 gridSize, int which) {
@@ -238,6 +251,21 @@ void main() {
   bg *= 1.0 - 0.6 * propSh;
   float lum = luminance(avg);
   float emissive = smoothstep(0.45, 1.1, lum);
+
+  // --- caminos empedrados: la junta es el glifo; la piedra, el fondo de la celda -----------
+  // El color sigue siendo el de la capa pictórica (la luz, la niebla y la respiración
+  // del mundo pasan por él); cada piedra lleva su propio tono.
+  if (uPaving == 1 && uLegibility == 0 && pathAt(src)) {
+    int k = src.x + (src.y & 1) * (PAVE_LEN / 2);
+    float tone = 0.8 + 0.4 * hash12(ivec2(k / PAVE_LEN, src.y) + ivec2(91, 37));
+    vec3 stone = avgc * tone;
+    float dim = 1.0 - 0.55 * clear; // despeje alrededor de las entidades
+    glyph = k % PAVE_LEN == PAVE_LEN - 1 ? uPaveGlyph[1] : uPaveGlyph[0];
+    bg = mix(uPaper, stone, PAVE_FACE) * dim;
+    fg = mix(uPaper, stone, PAVE_JOINT) * dim;
+    bg *= 1.0 - 0.6 * propSh;
+    emissive = 0.0;
+  }
 
   // --- piezas de escenario: la imagen convertida a ASCII en CPU ---------------------------
   // Glifo de la rampa del repo (líneas orientadas en el contorno y las aristas del

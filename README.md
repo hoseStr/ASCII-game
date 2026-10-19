@@ -66,7 +66,7 @@ Los tests garantizan tres propiedades del mundo:
    |---|---|---|---|
    | `.` | vacío (abismo con estrellas) | no | capa pictórica |
    | `,` | suelo | sí | capa pictórica |
-   | `:` | camino | sí | capa pictórica |
+   | `:` | camino (empedrado) | sí | capa pictórica |
    | `"` | flores | sí | capa pictórica |
    | `#` | roca (bloque en vista 3/4) | no | capa pictórica |
    | `T` | árbol (copa, tronco y sombra) | no | capa pictórica |
@@ -259,6 +259,7 @@ El JSON de cada variante guarda los parámetros del estudio (resolución, muestr
 
 - **Capa pictórica:** todo el terreno natural, incluidos los obstáculos (rocas, árboles, agua, vacío). Así recibe la luz dinámica, y la Linterna Lunar de la Fase 4 podrá revelar zonas oscuras.
 - **Capa semántica:** estructuras construidas (puentes), entidades y HUD.
+  - Cada puente se compone entero al entrar en la sala (`world/structures.ts`), no tile a tile: tablones de madera con su tono y la junta en trazo oscuro, alguno con veta o suelto; pasamanos de cuerda combados entre poste y poste (`┬-.___.-┬`) y cuerdas que cuelgan sobre el vacío. En cada cabecera de tierra hay dos faroles (`¤`) que dan luz cálida de verdad a la madera y a la orilla. Donde el puente llega al borde de la pantalla sigue en la sala vecina, sin poste.
 - **Modo F4:** dibuja el tilemap de colisión, para comprobar la jugabilidad sin la capa pictórica.
 
 ### Legibilidad: contornos de tinta
@@ -267,7 +268,7 @@ El JSON de cada variante guarda los parámetros del estudio (resolución, muestr
   - Las formas se calculan con un SDF por región de tiles, así que el contorno coincide con la colisión.
   - Los tiles contiguos del mismo tipo forman una sola masa (un bosque, un lago), sin costuras internas.
 - **Costa con línea suave.** La costa de cada isla lleva una línea más tenue, que se interrumpe en la entrada de los puentes.
-- **Caminos.** Tienen color cálido y claro, borde limpio y un margen oscuro en el suelo vecino.
+- **Caminos.** Empedrados: adoquines en hiladas a matajunta, con las juntas como trazo claro (`___|___|`) y la cara de cada piedra, con su propio tono, en el fondo de la celda. El color sigue saliendo de la capa pictórica, así que la luz, la niebla y la respiración del mundo pasan por ellos. Borde limpio y un margen oscuro en el suelo vecino. En modo fidelidad vuelven a ser la conversión por luminancia.
 - **Pasto distinto del follaje.** El pasto usa marcas finas (`. , ' ;`) y las copas de los árboles, follaje denso (`τ ↟ ♠ ♣ ψ`), así que el suelo nunca parece bosque.
 
 ### Rampas por material
@@ -331,7 +332,7 @@ src/
   assets/stamps/         estampas procesadas: imagen, forma del modelo 3D y sombra (6×10 muestras por celda)
 art/                     renders del estudio (modelos CC0), manifiesto de licencias y definición de estampas
 docs/                    guía de composición de escenarios
-tests/                   fidelidad dorada, fuente, legibilidad, núcleo, layout, mundo, colisión, sistemas, estampas, conversión, animación, composición
+tests/                   fidelidad dorada, fuente, legibilidad, núcleo, layout, mundo, colisión, sistemas, estampas, conversión, animación, composición, puentes
 tools/                   make_golden.py (fixtures), polyhaven.py y render_studio.py (estudio de render), make_stamps.py (estampas), screenshot.mjs (capturas), verify_stamps.mjs
 ```
 

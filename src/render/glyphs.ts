@@ -82,6 +82,15 @@ export const PROCEDURAL_GLYPHS = BLOCK_GLYPHS + '─│┌┐└┘├┤┬┴�
 /** Contornos de obstáculos y costa (capa pictórica): horizontal, vertical, / y \\. */
 export const EDGE_GLYPHS = ['─', '│', '/', '\\'] as const;
 
+/**
+ * Adoquines de los caminos (capa pictórica): la junta de abajo de cada hilada y
+ * la junta entre dos piedras. La cara de la piedra es el fondo de la celda.
+ */
+export const PAVE_GLYPHS = ['_', '|'] as const;
+
+/** Estructuras construidas (puentes, world/structures.ts): faroles y vetas de la madera. */
+export const STRUCTURE_GLYPHS = '¤¦';
+
 /** Glifos de la fuente que se estiran al alto de la celda (sombreados). */
 export const STRETCHED_GLYPHS = '░▒▓';
 
@@ -100,6 +109,7 @@ export function atlasGlyphList(): string[] {
   for (const m of MATERIALS) add(RAMPS[m].glyphs);
   add(RESERVED_ENTITY_GLYPHS);
   add(UI_GLYPHS);
+  add(STRUCTURE_GLYPHS);
   add(PROCEDURAL_GLYPHS);
   return list;
 }

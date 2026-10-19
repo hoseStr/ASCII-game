@@ -16,6 +16,7 @@ import { Fireflies } from './systems/fireflies';
 import { Particles } from './systems/particles';
 import { Sky } from './systems/sky';
 import { Hud } from './ui/hud';
+import { oklchToLinear } from './render/palette';
 import { CLOSED_EDGES, type EdgePolicy } from './world/collision';
 import { DIR_VEC, tileAt, type Dir, type RoomRenderData } from './world/room';
 import { PropLayer } from './render/propLayer';
@@ -26,6 +27,8 @@ import { Transition, type TransitionKind } from './world/transitions';
 import type { Room, World } from './world/world';
 
 const FACING_OF: Record<Dir, Facing> = { north: 'up', south: 'down', east: 'right', west: 'left' };
+/** luz cálida de los faroles de los puentes (RGB lineal) */
+const LANTERN_LIGHT = oklchToLinear([0.86, 0.12, 72]);
 
 export class Game {
   room!: Room;
@@ -170,6 +173,13 @@ export class Game {
       f.crystals[i * 4 + 1] = c.y;
       f.crystals[i * 4 + 2] = c.size;
       f.crystals[i * 4 + 3] = i * 1.7;
+    }
+    // Faroles de los puentes: una luz cálida por cabecera, con un parpadeo de llama.
+    const st = this.structures;
+    for (let i = 0; i < st.lightCount; i++) {
+      const fl = reduced ? 1 : 0.92 + 0.08 * Math.sin(t * 2.3 + i * 1.7) * Math.sin(t * 3.1 + i * 0.9);
+      const k = 1.15 * fl;
+      n = setLight(f, n, st.lights[i * 2]!, st.lights[i * 2 + 1]!, 7.5, 0.45, LANTERN_LIGHT[0] * k, LANTERN_LIGHT[1] * k, LANTERN_LIGHT[2] * k, 0.5 * fl);
     }
     const fly = pal.lights.firefly!;
     const ff = this.fireflies;
