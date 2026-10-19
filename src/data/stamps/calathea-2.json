@@ -1,6 +1,7 @@
 {
   "id": "calathea-2",
   "image": "calathea-2.png",
+  "form": "calathea-2.form.png",
   "use": "prop",
   "sizeTiles": [
     3,
@@ -27,11 +28,11 @@
     "image": "calathea-2.shadow.png",
     "offset": [
       8,
-      -1
+      20
     ],
     "size": [
-      76,
-      50
+      57,
+      29
     ]
   },
   "credits": {

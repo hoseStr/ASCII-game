@@ -8,10 +8,12 @@ import type { PlacedProp, StampDef } from '../src/world/props';
 import { HUD_ROWS, TILE_COLS, TILE_ROWS } from '../src/world/tiles';
 
 // Pieza de prueba: 1×2 tiles (5×6 celdas = 30×60 muestras), un poste opaco en el centro
-// (2 celdas de ancho: muestras 12..23). Sin sombra renderizada: proyecta su silueta.
+// (3 celdas de ancho: muestras 6..23; la del medio es relleno). Sin sombra renderizada:
+// proyecta su silueta.
 const def: StampDef = {
   id: 'poste',
   image: 'poste.png',
+  form: 'poste.form.png',
   use: 'prop',
   sizeTiles: [1, 2],
   cells: [5, 6],
@@ -26,8 +28,10 @@ const def: StampDef = {
 const W = 5 * PROP_SX;
 const H = 6 * PROP_SY;
 const rgba = new Uint8Array(W * H * 4);
-for (let y = 0; y < H; y++) for (let x = 12; x < 24; x++) rgba.set([200, 180, 150, 255], (y * W + x) * 4);
-const images = new Map([['poste', { frames: [stampImageFromRgba(rgba, W, H)], shadow: null }]]);
+for (let y = 0; y < H; y++) for (let x = 6; x < 24; x++) rgba.set([200, 180, 150, 255], (y * W + x) * 4);
+const form = new Uint8Array(W * H * 4);
+for (let i = 0; i < W * H; i++) form.set([128, 0, 0, 255], i * 4);
+const images = new Map([['poste', { frames: [stampImageFromRgba(rgba, W, H)], forms: [stampImageFromRgba(form, W, H)], shadow: null }]]);
 const prop: PlacedProp = { def, tx: 10, ty: 4, flip: false };
 const ox = prop.tx * TILE_COLS * PROP_SX;
 const oy = (HUD_ROWS + prop.ty * TILE_ROWS) * PROP_SY;

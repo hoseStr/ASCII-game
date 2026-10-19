@@ -12,6 +12,8 @@ export type StampUse = 'prop' | 'rockfill';
 export interface StampDef {
   id: string;
   image: string;
+  /** forma del modelo 3D, misma tira que la imagen: R tono, G líneas (ver stampConvert.ts) */
+  form: string;
   use: StampUse;
   /** tamaño de la caja de la estampa en tiles */
   sizeTiles: [number, number];
@@ -52,13 +54,15 @@ export interface PlacedProp {
   flip: boolean;
 }
 
-/** Grupo de rocas `#` contiguas (caja inclusiva en tiles) con su textura. */
+/** Rectángulo de rocas `#` (caja inclusiva en tiles) con su roca renderizada. */
 export interface RockFill {
   def: StampDef;
   tx0: number;
   ty0: number;
   tx1: number;
   ty1: number;
+  /** en espejo: la misma roca no se repite igual al lado */
+  flip: boolean;
 }
 
 const defFiles = import.meta.glob('../data/stamps/*.json', { import: 'default', eager: true }) as Record<string, StampDef>;
@@ -196,7 +200,9 @@ const ROCK_ASPECT_TOLERANCE = 0.35;
 /**
  * Cada rectángulo de roca toma una roca renderizada recortada de las
  * permitidas en la zona: entre las variantes cuya proporción se parece a la del
- * rectángulo, una elegida por hash (determinista), para que no se repitan.
+ * rectángulo, una elegida por hash (determinista). Dos rectángulos que se tocan
+ * no repiten variante si hay otra, y la mitad sale en espejo: un grupo de rocas
+ * se lee como cantos distintos, no como la misma roca copiada.
  * La imagen se estira al rectángulo; su contorno es el de la propia imagen.
  */
 export function assignRockFills(map: Tilemap, defs: Map<string, StampDef>, seed: number, zone?: string): RockFill[] {
@@ -204,13 +210,20 @@ export function assignRockFills(map: Tilemap, defs: Map<string, StampDef>, seed:
   const inZone = all.filter((d) => !d.zones || zone === undefined || d.zones.includes(zone));
   const fills = inZone.length > 0 ? inZone : all;
   if (fills.length === 0) return [];
-  return rockRects(map).map((r, i) => {
+  const out: RockFill[] = [];
+  const touches = (a: { tx0: number; ty0: number; tx1: number; ty1: number }, b: RockFill): boolean =>
+    a.tx0 <= b.tx1 + 1 && b.tx0 <= a.tx1 + 1 && a.ty0 <= b.ty1 + 1 && b.ty0 <= a.ty1 + 1;
+  rockRects(map).forEach((r, i) => {
     const aspect = (r.tx1 - r.tx0 + 1) / (r.ty1 - r.ty0 + 1);
     let h = (seed ^ Math.imul(i + 1, 0x9e3779b1) ^ Math.imul(r.tx0 * 31 + r.ty0, 0x85ebca6b)) >>> 0;
     h = Math.imul(h ^ (h >>> 15), 0x2c1b3c6d) >>> 0;
     const score = (d: StampDef): number => Math.abs(Math.log(d.sizeTiles[0] / d.sizeTiles[1] / aspect));
     const best = Math.min(...fills.map(score));
     const candidates = fills.filter((d) => score(d) <= best + ROCK_ASPECT_TOLERANCE);
-    return { def: candidates[h % candidates.length]!, ...r };
+    const near = new Set(out.filter((o) => touches(r, o)).map((o) => o.def));
+    const fresh = candidates.filter((d) => !near.has(d));
+    const pool = fresh.length > 0 ? fresh : candidates;
+    out.push({ def: pool[h % pool.length]!, ...r, flip: ((h >>> 16) & 1) === 1 });
   });
+  return out;
 }

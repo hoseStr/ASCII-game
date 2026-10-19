@@ -6,13 +6,15 @@ import type { PlacedProp, StampDef } from '../src/world/props';
 import { HUD_ROWS, TILE_COLS, TILE_ROWS } from '../src/world/tiles';
 
 // Pieza animada de prueba: 1×1 tile (5×3 celdas = 30×30 muestras) y 2 fotogramas.
-// Fotograma 0: barra opaca en la columna de celdas 1; fotograma 1: en la columna 3.
+// Fotograma 0: barra opaca en las columnas de celdas 0–2; fotograma 1: en las 2–4.
+// La celda central de cada barra (columna 1 o 3) es relleno; sus bordes, líneas.
 const W = 5 * PROP_SX;
 const H = 3 * PROP_SY;
 const FRAMES = 2;
 const def: StampDef = {
   id: 'hoja',
   image: 'hoja.png',
+  form: 'hoja.form.png',
   use: 'prop',
   sizeTiles: [1, 1],
   cells: [5, 3],
@@ -26,10 +28,20 @@ const def: StampDef = {
 };
 const strip = new Uint8Array(W * H * FRAMES * 4);
 for (let y = 0; y < H; y++) {
-  for (let x = PROP_SX; x < 2 * PROP_SX; x++) strip.set([10, 200, 30, 255], (y * W + x) * 4);
-  for (let x = 3 * PROP_SX; x < 4 * PROP_SX; x++) strip.set([10, 200, 30, 255], ((H + y) * W + x) * 4);
+  for (let x = 0; x < 3 * PROP_SX; x++) strip.set([10, 200, 30, 255], (y * W + x) * 4);
+  for (let x = 2 * PROP_SX; x < 5 * PROP_SX; x++) strip.set([10, 200, 30, 255], ((H + y) * W + x) * 4);
 }
-const asset: StampAsset = { frames: splitFrames(stampImageFromRgba(strip, W, H * FRAMES), FRAMES), shadow: null };
+/** forma lisa (tono medio, sin líneas internas) del tamaño de `n` fotogramas */
+const flatForm = (n: number): Uint8Array => {
+  const f = new Uint8Array(W * H * n * 4);
+  for (let i = 0; i < W * H * n; i++) f.set([128, 0, 0, 255], i * 4);
+  return f;
+};
+const asset: StampAsset = {
+  frames: splitFrames(stampImageFromRgba(strip, W, H * FRAMES), FRAMES),
+  forms: splitFrames(stampImageFromRgba(flatForm(FRAMES), W, H * FRAMES), FRAMES),
+  shadow: null,
+};
 const images = new Map([['hoja', asset]]);
 // fila y columna 0: fase 0 (el fotograma depende solo del tiempo)
 const prop: PlacedProp = { def, tx: 0, ty: 0, flip: false };
@@ -64,7 +76,8 @@ describe('piezas animadas', () => {
     expect(pieceAt(layer, 1)).toBe(false);
     expect(pieceAt(layer, 3)).toBe(true);
     expect(layer.dirtyCount).toBe(1);
-    expect(Array.from(layer.dirtyRects.subarray(0, 4))).toEqual([cx(0), cy(0), cx(0) + 4, cy(0) + 2]);
+    // la caja de la pieza y su anillo de una celda (recortado al borde de la pantalla)
+    expect(Array.from(layer.dirtyRects.subarray(0, 4))).toEqual([cx(0), cy(0) - 1, cx(0) + 5, cy(0) + 3]);
     expect(layer.animate(0.35, true)).toBe(false); // mismo fotograma: nada que subir
     expect(layer.animate(0.5, true)).toBe(true); // vuelta al 0 (bucle)
     expect(pieceAt(layer, 1)).toBe(true);
@@ -81,8 +94,9 @@ describe('piezas animadas', () => {
       const r = layer.dirtyRects;
       return (r[k * 4 + 2]! - r[k * 4]! + 1) * (r[k * 4 + 3]! - r[k * 4 + 1]! + 1);
     };
-    expect(area(0)).toBe(5 * 3);
-    expect(area(1)).toBe(5 * 3);
+    // cada una, su caja de 5×3 celdas y el anillo (la de la columna 0, recortada a la izquierda)
+    expect(area(0)).toBe(6 * 5);
+    expect(area(1)).toBe(7 * 5);
   });
 
   it('con movimiento reducido se queda en el fotograma 0', () => {
@@ -102,7 +116,7 @@ describe('piezas animadas', () => {
     for (let i = 0; i < W * H; i++) solid.set([150, 150, 150, 255], i * 4);
     const imgs = new Map<string, StampAsset>([
       ['hoja', asset],
-      ['roca', { frames: [stampImageFromRgba(solid, W, H)], shadow: null }],
+      ['roca', { frames: [stampImageFromRgba(solid, W, H)], forms: [stampImageFromRgba(flatForm(1), W, H)], shadow: null }],
     ]);
     const layer = new PropLayer();
     layer.build([prop, { def: still, tx: 0, ty: 0, flip: false }], [], imgs);
@@ -137,7 +151,7 @@ describe('sombras renderizadas', () => {
   // sombra de 16×8 muestras de sombra, desplazada (+6, +10) respecto al origen de la estampa
   const shadow = { w: 16, h: 8, data: new Uint8Array(128).fill(255) };
   const shDef: StampDef = { ...def, id: 'helecho', frames: 1, fps: 0, shadow: 'render', shadowImage: { image: 'x', offset: [6, 10], size: [16, 8] } };
-  const one = { frames: [asset.frames[0]!], shadow };
+  const one = { frames: [asset.frames[0]!], forms: [asset.forms[0]!], shadow };
   const imgs = new Map<string, StampAsset>([['helecho', one]]);
 
   it('se usa la sombra del render, en su sitio (rejilla de sombras)', () => {

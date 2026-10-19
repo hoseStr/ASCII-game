@@ -1,14 +1,15 @@
 {
   "id": "statue",
   "image": "statue.png",
+  "form": "statue.form.png",
   "use": "prop",
   "sizeTiles": [
-    3,
-    3
+    5,
+    5
   ],
   "cells": [
-    15,
-    9
+    25,
+    15
   ],
   "samples": [
     6,
@@ -17,9 +18,11 @@
   "solid": true,
   "shadow": "render",
   "footprint": [
-    "...",
-    "...",
-    "###"
+    ".....",
+    ".....",
+    ".....",
+    ".....",
+    "#####"
   ],
   "frames": 1,
   "fps": 0,
@@ -27,11 +30,11 @@
     "image": "statue.shadow.png",
     "offset": [
       0,
-      10
+      17
     ],
     "size": [
-      82,
-      44
+      138,
+      73
     ]
   },
   "credits": {

@@ -1,6 +1,7 @@
 {
   "id": "boulder-rust",
   "image": "boulder-rust.png",
+  "form": "boulder-rust.form.png",
   "use": "rockfill",
   "sizeTiles": [
     2,

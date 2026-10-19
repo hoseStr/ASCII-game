@@ -66,6 +66,12 @@ uint rampGlyph(int mat, int idx) {
   return texelFetch(uRamps, ivec2(clamp(ri, 0, n - 1), mat), 0).r;
 }
 
+// Glifo en su posición de la rampa, sin invertir: las piezas de escenario guardan
+// glifos de línea y de relleno elegidos en CPU (el sentido ink los desordenaría).
+uint rampGlyphAt(int mat, int idx) {
+  return texelFetch(uRamps, ivec2(clamp(idx, 0, uRampLen[mat] - 1), mat), 0).r;
+}
+
 // Desorden de transición: desplaza el índice dentro de la rampa del material.
 int scrambleIdx(int idx, int mat, ivec2 cell, float amount) {
   if (amount <= 0.0) return idx;
@@ -234,10 +240,10 @@ void main() {
   float emissive = smoothstep(0.45, 1.1, lum);
 
   // --- piezas de escenario: la imagen convertida a ASCII en CPU ---------------------------
-  // Glifo de la rampa del repo (por forma en los bordes y detalles, el del repo en las
-  // zonas lisas) y color real de la imagen; sin tinte, luz, niebla, respiración,
-  // contornos ni bloom. El fondo de la celda es el del entorno, con un velo tenue del
-  // color de la pieza dentro de su silueta: la pieza se lee como una forma.
+  // Glifo de la rampa del repo (líneas orientadas en el contorno y las aristas del
+  // modelo 3D, relleno por el tono de su forma) y color real de la imagen; sin tinte,
+  // luz, niebla, respiración, contornos ni bloom. El fondo de la celda es el del
+  // entorno, con un velo tenue del color de la pieza dentro de su silueta.
   uvec4 pcell = texelFetch(uPropCell, src, 0);
   uvec2 pbase = texelFetch(uPropBase, src, 0).rg;
   bool pure = pcell.a > 0u;
@@ -248,7 +254,7 @@ void main() {
     mat = MAT_BASE;
     idx = pos;
     Ls = (pc.r + pc.g + pc.b) / 3.0 * 255.0;
-    glyph = rampGlyph(MAT_BASE, scrambleIdx(pos, MAT_BASE, cell, scramble));
+    glyph = rampGlyphAt(MAT_BASE, scrambleIdx(pos, MAT_BASE, cell, scramble));
     fg = pc;
     bg = mix(bg, pc, uPropFill * min(1.0, float(pbase.g) / 255.0 * 1.5));
     emissive = 0.0;

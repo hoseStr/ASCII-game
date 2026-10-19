@@ -1,6 +1,7 @@
 {
   "id": "rock-tall",
   "image": "rock-tall.png",
+  "form": "rock-tall.form.png",
   "use": "prop",
   "sizeTiles": [
     3,
@@ -27,10 +28,10 @@
     "image": "rock-tall.shadow.png",
     "offset": [
       0,
-      17
+      16
     ],
     "size": [
-      73,
+      72,
       33
     ]
   },

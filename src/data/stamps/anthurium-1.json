@@ -1,6 +1,7 @@
 {
   "id": "anthurium-1",
   "image": "anthurium-1.png",
+  "form": "anthurium-1.form.png",
   "use": "prop",
   "sizeTiles": [
     4,
@@ -31,7 +32,7 @@
       20
     ],
     "size": [
-      82,
+      83,
       49
     ]
   },

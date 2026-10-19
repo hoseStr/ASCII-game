@@ -1,6 +1,7 @@
 {
   "id": "pad-1",
   "image": "pad-1.png",
+  "form": "pad-1.form.png",
   "use": "prop",
   "sizeTiles": [
     5,
@@ -26,12 +27,12 @@
   "shadowImage": {
     "image": "pad-1.shadow.png",
     "offset": [
-      23,
-      13
+      26,
+      14
     ],
     "size": [
-      110,
-      60
+      108,
+      58
     ]
   },
   "credits": {

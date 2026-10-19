@@ -1,6 +1,7 @@
 {
   "id": "boulder-pile",
   "image": "boulder-pile.png",
+  "form": "boulder-pile.form.png",
   "use": "rockfill",
   "sizeTiles": [
     2,

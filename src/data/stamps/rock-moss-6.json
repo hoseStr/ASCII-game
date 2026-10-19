@@ -1,6 +1,7 @@
 {
   "id": "rock-moss-6",
   "image": "rock-moss-6.png",
+  "form": "rock-moss-6.form.png",
   "use": "rockfill",
   "sizeTiles": [
     3,
@@ -26,7 +27,7 @@
     "image": "rock-moss-6.shadow.png",
     "offset": [
       4,
-      5
+      4
     ],
     "size": [
       57,

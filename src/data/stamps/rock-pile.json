@@ -1,6 +1,7 @@
 {
   "id": "rock-pile",
   "image": "rock-pile.png",
+  "form": "rock-pile.form.png",
   "use": "prop",
   "sizeTiles": [
     5,

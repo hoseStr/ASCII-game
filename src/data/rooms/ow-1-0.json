@@ -8,13 +8,13 @@
     {
       "stamp": "statue",
       "tile": [
-        14,
-        2
+        13,
+        0
       ],
       "hero": true
     },
     {
-      "stamp": "bust",
+      "stamp": "bust-small",
       "tile": [
         23,
         9

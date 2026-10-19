@@ -2,23 +2,27 @@
 Pipeline de estampas: renders de modelos 3D (CC0) → piezas de escenario ASCII.
 
 Las piezas parten SOLO de modelos 3D fotoescaneados, fotografiados con
-tools/render_studio.py (alfa limpio, escala real, sombra renderizada, viento).
+tools/render_studio.py (alfa limpio, escala real, sombra renderizada, viento y,
+por cada imagen, su form.png con la forma del modelo: luz sin textura, aristas
+de oclusión y pliegues).
 Por cada estampa de art/stamps.json:
   1. comprueba que su fuente (art/manifest.json) tiene licencia permitida;
   2. encaja los fotogramas del render a su tamaño en tiles corrigiendo la
      proporción de la celda (3:5), a 6×10 muestras por celda (alfa premultiplicado);
-  3. "revela" la imagen como se revelaría una foto, para que la forma se lea en
-     ASCII: niveles automáticos, contraste local (≈1 celda), sombras algo más
-     abiertas y un poco más de saturación (los mismos ajustes en todos los
-     fotogramas, sin parpadeo);
-  4. escribe src/assets/stamps/<id>.png (tira vertical de fotogramas RGBA),
-     <id>.shadow.png (sombra en la rejilla de sombras, 4×4 por celda) y
-     src/data/stamps/<id>.json (huella de colisión, sombra, créditos);
-  5. escribe src/data/stamps/<id>.preview.txt con el algoritmo LITERAL del repo
-     ASCII-generator (img2txt a color: bloques 1:2, (R+G+B)/3, rampa de 70);
-  6. regenera src/data/glyphShapes.json (forma de cada glifo de la rampa, medida
-     en la fuente del juego con la misma disposición que el atlas) y la sección
-     de créditos de THIRD_PARTY_NOTICES.md.
+  3. suaviza la silueta (el borde dentado del escaneo sería ruido en ASCII) y
+     "revela" la imagen como se revelaría una foto: niveles automáticos,
+     contraste local (≈1 celda), sombras algo más abiertas y un poco más de
+     saturación (los mismos ajustes en todos los fotogramas, sin parpadeo);
+  4. saca de las pasadas del modelo 3D la forma de la pieza, con el mismo encaje:
+     el tono (la luz sobre la forma, sin la textura, más un poco de detalle de
+     la foto) y las líneas internas (aristas de oclusión y pliegues);
+  5. escribe src/assets/stamps/<id>.png (tira vertical de fotogramas RGBA),
+     <id>.form.png (misma tira: R tono, G líneas), <id>.shadow.png (sombra en
+     la rejilla de sombras, 4×4 por celda) y src/data/stamps/<id>.json (huella
+     de colisión, sombra, créditos);
+  6. escribe src/data/stamps/<id>.preview.txt con el algoritmo LITERAL del repo
+     ASCII-generator (img2txt a color: bloques 1:2, (R+G+B)/3, rampa de 70) y
+     regenera la sección de créditos de THIRD_PARTY_NOTICES.md.
 
 Requisitos: Python 3, numpy, Pillow y opencv-python-headless (tools/requirements.txt).
 Uso:
@@ -26,12 +30,11 @@ Uso:
 """
 import json
 import os
-import struct
 import sys
 
 import cv2
 import numpy as np
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 ALLOWED_LICENSES = {"CC0-1.0", "PDM-1.0"}
@@ -41,9 +44,6 @@ CELL_W_UNITS, CELL_H_UNITS = 0.6, 1.0
 SX, SY = 6, 10  # muestras por celda de la imagen (proporción de la celda, 3:5)
 SHADOW_S = 4  # muestras por celda (en x y en y) de la rejilla de sombras
 REPO_RAMP = "$@B%8&WM#*oahkbdpqwmZO0QLCJUYXzcvunxrjft/\\|()1{}[]?-_+~<>i!lI;:,\"^`'. "
-LIGHT_RAMP = REPO_RAMP[::-1]  # de vacío a tinta (sentido light del juego)
-FONT = os.path.join(ROOT, "src", "assets", "fonts", "DejaVuSansMono-Bold.ttf")
-SHAPE_GRID = (3, 5)  # rejilla (x, y) en la que se compara la forma de la celda con la del glifo
 NOTICE_BEGIN = "<!-- imagenes:inicio (generado por tools/make_stamps.py) -->"
 NOTICE_END = "<!-- imagenes:fin -->"
 METERS_PER_UNIT = 0.4  # la princesa mide 4 filas ≈ 1,6 m
@@ -54,6 +54,14 @@ LEVELS = (2, 98)  # percentiles de luma que pasan a negro y blanco
 LOCAL_CONTRAST = 0.6  # realce de la forma: Y + k·(Y − Y desenfocada a ≈1 celda)
 SHADOW_GAMMA = 0.9  # < 1 abre las sombras
 SATURATION = 1.2
+
+# forma del modelo 3D (ver form_frames); cada estampa puede cambiarlos en "form" de art/stamps.json
+FORM_DEFAULTS = {
+    "detail": 0.25,  # cuánto detalle de la foto entra en el tono (0 = solo la luz sobre la forma)
+    "occlusion": [6.0, 16.0],  # salto de profundidad (píxeles de render) de nada a línea plena
+    "crease": [50.0, 75.0],  # pliegue (grados) de nada a línea plena
+    "silhouette": 1.0,  # suavizado del contorno (muestras): borra el dentado del escaneo
+}
 
 
 def load_json(path):
@@ -164,71 +172,71 @@ def enhance(frames):
     return out
 
 
-# --- forma de los glifos (misma disposición que src/render/atlas.ts) ------------------------
-def ttf_tables(path):
-    b = open(path, "rb").read()
-    n = struct.unpack(">H", b[4:6])[0]
-    t = {}
-    for i in range(n):
-        tag, _, off, ln = struct.unpack(">4sIII", b[12 + 16 * i : 28 + 16 * i])
-        t[tag.decode("latin-1")] = b[off : off + ln]
-    return t
+# --- silueta y forma del modelo 3D ---------------------------------------------------------
+def smoothstep(e0, e1, x):
+    t = np.clip((x - e0) / (e1 - e0), 0.0, 1.0)
+    return t * t * (3 - 2 * t)
 
 
-def font_layout(cw, ch):
-    """Tamaño de fuente, línea base y lápiz como buildAtlas: avance = ancho, caja tipográfica en el alto."""
-    t = ttf_tables(FONT)
-    upem = struct.unpack(">H", t["head"][18:20])[0]
-    asc, desc = struct.unpack(">hh", t["OS/2"][68:72])
-    adv_em = ImageFont.truetype(FONT, upem).getlength("M") / upem
-    typo_em = (asc - desc) / upem
-    size = min(cw / adv_em, ch / typo_em)
-    baseline = round((ch - typo_em * size) / 2 + asc / upem * size)
-    return size, baseline, round((cw - adv_em * size) / 2)
+def mask_blur(img, mask, sigma):
+    """Desenfoque gaussiano que solo promedia dentro de la máscara (no mezcla el vacío)."""
+    m = mask.astype(np.float64)
+    num = cv2.GaussianBlur(img * m, (0, 0), sigma)
+    den = cv2.GaussianBlur(m, (0, 0), sigma)
+    return np.where(den > 1e-3, num / np.maximum(den, 1e-3), img)
 
 
-def glyph_bitmap(ch_, cw, ch):
-    """Cobertura del glifo en su celda; si la tinta se sale, se encaja escalando (como el atlas)."""
-    size, baseline, pen_x = font_layout(cw, ch)
-    font = ImageFont.truetype(FONT, round(size))
-    big = Image.new("L", (cw * 3, ch * 3), 0)
-    ImageDraw.Draw(big).text((cw + pen_x, ch + baseline), ch_, font=font, fill=255, anchor="ls")
-    a = np.asarray(big).astype(np.float64) / 255.0
-    ys, xs = np.nonzero(a > 0.02)
-    if len(xs):
-        x0, x1, y0, y1 = xs.min() - cw, xs.max() + 1 - cw, ys.min() - ch, ys.max() + 1 - ch
-        if max(0, -x0, x1 - cw, -y0, y1 - ch) > 0.75 * cw / 12:
-            sy = min(1.0, baseline / max(1e-3, baseline - y0), (ch - baseline) / max(1e-3, y1 - baseline))
-            sx = min(1.0, cw / max(1e-3, x1 - x0))
-            tx = cw * 1.5 - sx * (cw + (x0 + x1) / 2) if sx < 1 else (1 - sx) * cw * 1.5
-            M = np.array([[sx, 0, tx], [0, sy, (1 - sy) * (ch + baseline)]])
-            a = cv2.warpAffine(a, M, (cw * 3, ch * 3), flags=cv2.INTER_AREA)
-    return a[ch : 2 * ch, cw : 2 * cw]
+def smooth_silhouette(frame, sigma):
+    """
+    Contorno sin el dentado del escaneo: el alfa se desenfoca y se vuelve a cortar
+    en 0,5 con un borde estrecho. Las muestras que entran en la silueta toman el
+    color de sus vecinas (bajo un alfa nulo no hay color).
+    """
+    if sigma <= 0:
+        return frame
+    rgb, a = frame[..., :3], frame[..., 3]
+    a2 = np.clip((cv2.GaussianBlur(a, (0, 0), sigma) - 0.5) * 4 + 0.5, 0, 1)
+    rgb2 = np.where((a < 0.5)[..., None], mask_blur(rgb, np.dstack([a > 0.5] * 3), 1.5), rgb)
+    return np.dstack([np.clip(rgb2, 0, 1), a2])
 
 
-def write_glyph_shapes():
-    """Cobertura de cada glifo de la rampa en la rejilla SHAPE_GRID y respuesta tonal del repo."""
-    gx, gy = SHAPE_GRID
-    cw, ch = 48, 80  # celda de referencia (3:5), 4× la de 1080p
-    cov = []
-    for c in LIGHT_RAMP:
-        bm = glyph_bitmap(c, cw, ch)
-        cov.append(bm.reshape(gy, ch // gy, gx, cw // gx).mean(axis=(1, 3)).reshape(-1))
-    cov = np.array(cov)
-    mu = cov.mean(1)
-    # respuesta tonal del repo: cobertura del glifo que el repo elige en cada posición de
-    # la rampa, suavizada y monótona (la rampa del repo no está ordenada por tinta)
-    env = np.maximum.accumulate(np.convolve(np.pad(mu, 2, mode="edge"), np.ones(5) / 5, mode="valid"))
-    data = {
-        "description": "Generado por tools/make_stamps.py: forma de cada glifo de la rampa del repo (sentido light, de vacío a tinta) medida en DejaVu Sans Mono Bold con la disposición del atlas. coverage[i] = tinta media de cada región de la rejilla (filas de arriba abajo); response[i] = respuesta tonal de la rampa (cobertura suavizada y monótona).",
-        "ramp": LIGHT_RAMP,
-        "grid": list(SHAPE_GRID),
-        "coverage": [[round(float(v), 4) for v in row] for row in cov],
-        "response": [round(float(v), 4) for v in env],
-    }
-    with open(os.path.join(ROOT, "src", "data", "glyphShapes.json"), "w", encoding="utf-8", newline="\n") as f:
-        json.dump(data, f, ensure_ascii=False, indent=1)
-        f.write("\n")
+def form_frames(rgba_frames, form_frames_raw, fit, rmeta, opts):
+    """
+    Forma de la pieza, con el mismo encaje que la imagen, desde las pasadas del
+    modelo 3D (render_studio.write_form guarda sqrt(valor / escala) en cada canal):
+      tono  = luz sobre la forma, sin la textura (niveles del fotograma 0), con un
+              poco de luma de la foto (opts["detail"]); 0..1
+      línea = aristas de oclusión y pliegues, de nada a línea plena entre sus
+              umbrales; se engrosan antes de reducir para que una línea de un
+              píxel de render no se pierda en la muestra.
+    Devuelve una imagen RGB uint8 (R tono, G línea, B 0) por fotograma.
+    """
+    ref = rmeta["form"]
+    x0, y0, x1, y1 = fit["bbox"]
+    k = max(1, int(round(max((x1 - x0) / fit["n"][0], (y1 - y0) / fit["n"][1]))))
+    decoded = []
+    for rgba, f in zip(rgba_frames, form_frames_raw):
+        f = f.astype(np.float64) / 255.0
+        m = rgba[..., 3] > 127
+        light = mask_blur(f[..., 0] ** 2 * ref["lightRef"], m, 1.0)
+        occ = f[..., 1] ** 2 * ref["occlusionRef"]
+        crease = f[..., 2] ** 2 * ref["creaseRef"]
+        line = np.maximum(smoothstep(*opts["occlusion"], occ), smoothstep(*opts["crease"], crease)) * m
+        decoded.append((m, light, rgba[..., :3].mean(-1) / 255.0, cv2.dilate(line, np.ones((k, k)))))
+    m0, l0, y0_, _ = decoded[0]
+    llo, lhi = np.percentile(l0[m0], 2), np.percentile(l0[m0], 98)
+    ylo, yhi = np.percentile(y0_[m0], 2), np.percentile(y0_[m0], 98)
+    out = []
+    for (m, light, Y, line), rgba in zip(decoded, rgba_frames):
+        tone = np.clip((light - llo) / max(lhi - llo, 1e-6), 0, 1)
+        tone = (1 - opts["detail"]) * tone + opts["detail"] * np.clip((Y - ylo) / max(yhi - ylo, 1e-6), 0, 1)
+        a = rgba[..., 3].astype(np.float64) / 255.0
+        tc = apply_fit(np.dstack([tone] * 3) * 255, a, fit)
+        lc = apply_fit(np.dstack([line] * 3) * 255, a, fit)[..., 0]
+        inside = tc[..., 3] > 0.5
+        tone_c = np.where(inside, tc[..., 0], mask_blur(tc[..., 0], inside, 1.5))  # muestras que ganó la silueta suavizada
+        out.append(np.dstack([np.round(tone_c * 255), np.round(np.clip(lc, 0, 1) * 255), np.zeros_like(lc)]).astype(np.uint8))
+    return out
 
 
 # --- metadatos ---------------------------------------------------------------------------
@@ -314,7 +322,6 @@ def main():
     out_data = os.path.join(ROOT, "src", "data", "stamps")
     os.makedirs(out_png, exist_ok=True)
     os.makedirs(out_data, exist_ok=True)
-    write_glyph_shapes()
     for st in defs:
         src = sources.get(st["source"])
         if src is None:
@@ -336,17 +343,23 @@ def main():
         if size == "auto":
             size = auto_rock_tiles(bbox) if st["use"] == "rockfill" else auto_size_tiles(bbox, rmeta["metersPerPixel"], st.get("scale", 1.0))
         fit = compute_fit(bbox, size)
-        frames = enhance([apply_fit(f[..., :3], f[..., 3].astype(np.float64) / 255.0, fit) for f in rgba_frames])
+        opts = {**FORM_DEFAULTS, **st.get("form", {})}
+        frames = enhance([smooth_silhouette(apply_fit(f[..., :3], f[..., 3].astype(np.float64) / 255.0, fit), opts["silhouette"]) for f in rgba_frames])
+        # forma del modelo 3D: cada imagen del estudio trae su form.png
+        raw_forms = [np.asarray(Image.open(os.path.join(rdir, nm.replace(".png", ".form.png"))).convert("RGB")) for nm in names]
+        forms = form_frames(rgba_frames, raw_forms, fit, rmeta, opts)
         sh = np.asarray(Image.open(os.path.join(rdir, f"{var}.shadow.png")).convert("RGBA"))[..., 3].astype(np.float64) / 255.0
         shadow_img, shadow_off = fit_shadow(sh, fit)
         fp, _ = footprint(frames[0][..., 3], size, st.get("collision", "none") if st.get("solid") else "none")
         pngs = [(np.round(np.clip(fr, 0, 1) * 255)).astype(np.uint8) for fr in frames]
         # varios fotogramas: tira vertical (fotograma k en las filas k·alto…)
         Image.fromarray(np.concatenate(pngs, axis=0), "RGBA").save(os.path.join(out_png, f"{st['id']}.png"), optimize=True)
+        Image.fromarray(np.concatenate(forms, axis=0), "RGB").save(os.path.join(out_png, f"{st['id']}.form.png"), optimize=True)
         Image.fromarray((np.round(shadow_img * 255)).astype(np.uint8), "L").save(os.path.join(out_png, f"{st['id']}.shadow.png"), optimize=True)
         meta = {
             "id": st["id"],
             "image": f"{st['id']}.png",
+            "form": f"{st['id']}.form.png",
             "use": st["use"],
             "sizeTiles": size,
             "cells": [size[0] * TILE_COLS, size[1] * TILE_ROWS],

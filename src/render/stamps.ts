@@ -1,8 +1,8 @@
 /**
  * Imágenes de las estampas: los PNG procesados por tools/make_stamps.py (renders
- * de modelos 3D, revelados para ASCII) se decodifican una sola vez al arrancar.
- * Se conservan sus bytes (RGBA de 8 bits); la conversión a ASCII de cada celda
- * está en stampConvert.ts.
+ * de modelos 3D, revelados para ASCII, y su forma: tono y líneas del modelo) se
+ * decodifican una sola vez al arrancar. Se conservan sus bytes (RGBA de 8 bits);
+ * la conversión a ASCII de cada celda está en stampConvert.ts.
  */
 import type { StampDef } from '../world/props';
 import { convertCell, newCellResult, PROP_RAMP, PROP_SX, PROP_SY } from './stampConvert';
@@ -27,9 +27,13 @@ export interface GrayImage {
   data: Uint8Array;
 }
 
-/** Una estampa lista para usar: sus fotogramas y, si la tiene, su sombra renderizada. */
+/**
+ * Una estampa lista para usar: sus fotogramas, la forma de cada uno (RGBA: R tono
+ * de la forma, G líneas del modelo, B 0) y, si la tiene, su sombra renderizada.
+ */
 export interface StampAsset {
   frames: StampImage[];
+  forms: StampImage[];
   shadow: GrayImage | null;
 }
 
@@ -57,12 +61,14 @@ export async function loadStampImages(defs: Map<string, StampDef>): Promise<Map<
     [...defs.values()].map(async (def) => {
       const url = urls[`../assets/stamps/${def.image}`];
       if (!url) throw new Error(`Estampa '${def.id}': falta la imagen ${def.image}`);
-      const img = await decodeImage(url);
+      const furl = urls[`../assets/stamps/${def.form}`];
+      if (!furl) throw new Error(`Estampa '${def.id}': falta la forma ${def.form}`);
+      const [img, form] = await Promise.all([decodeImage(url), decodeImage(furl)]);
       const frames = Math.max(1, def.frames || 1);
       const w = def.cells[0] * def.samples[0];
       const h = def.cells[1] * def.samples[1] * frames;
-      if (img.w !== w || img.h !== h) {
-        throw new Error(`Estampa '${def.id}': la imagen mide ${img.w}×${img.h}, se esperaba ${w}×${h}`);
+      for (const [name, im] of [['imagen', img], ['forma', form]] as const) {
+        if (im.w !== w || im.h !== h) throw new Error(`Estampa '${def.id}': la ${name} mide ${im.w}×${im.h}, se esperaba ${w}×${h}`);
       }
       let shadow: GrayImage | null = null;
       if (def.shadowImage) {
@@ -73,7 +79,11 @@ export async function loadStampImages(defs: Map<string, StampDef>): Promise<Map<
         for (let i = 0; i < data.length; i++) data[i] = sh.rgba[i * 4]!;
         shadow = { w: sh.w, h: sh.h, data };
       }
-      out.set(def.id, { frames: splitFrames(stampImageFromRgba(img.rgba, img.w, img.h), frames), shadow });
+      out.set(def.id, {
+        frames: splitFrames(stampImageFromRgba(img.rgba, img.w, img.h), frames),
+        forms: splitFrames(stampImageFromRgba(form.rgba, form.w, form.h), frames),
+        shadow,
+      });
     }),
   );
   return out;
@@ -92,17 +102,17 @@ export interface StampCell {
 }
 
 /**
- * Una estampa (PROP_SX × PROP_SY muestras por celda) convertida a celdas con la
- * misma conversión que el juego (stampConvert.ts). Para la página de depuración
- * y los tests; el juego convierte sobre la capa de la sala.
+ * Una estampa (PROP_SX × PROP_SY muestras por celda) y su forma convertidas a
+ * celdas con la misma conversión que el juego (stampConvert.ts). Para la página
+ * de depuración y los tests; el juego convierte sobre la capa de la sala.
  */
-export function convertStamp(img: StampImage): StampCell[][] {
+export function convertStamp(img: StampImage, form: StampImage): StampCell[][] {
   const res = newCellResult();
   const out: StampCell[][] = [];
   for (let cy = 0; cy < img.h / PROP_SY; cy++) {
     const row: StampCell[] = [];
     for (let cx = 0; cx < img.w / PROP_SX; cx++) {
-      convertCell(img.data, img.w, cx * PROP_SX, cy * PROP_SY, res);
+      convertCell(img.data, form.data, img.w, img.h, cx * PROP_SX, cy * PROP_SY, res);
       row.push({
         char: res.pos < 0 ? '' : PROP_RAMP[res.pos]!,
         pos: res.pos,
@@ -119,7 +129,8 @@ export function convertStamp(img: StampImage): StampCell[][] {
 
 /**
  * Remuestrea una estampa a w×h muestras (promedio por área, ponderado por alfa,
- * con enteros): se usa para estirar una roca a su rectángulo de tiles.
+ * con enteros): se usa para estirar una roca a su rectángulo de tiles. Con la
+ * imagen de forma (alfa 255 en todas las muestras) es el promedio por área.
  */
 export function resampleStamp(img: StampImage, w: number, h: number): StampImage {
   const data = new Uint8Array(w * h * 4);

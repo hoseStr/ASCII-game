@@ -111,23 +111,25 @@ El repositorio original convierte fotos y video en texto, y el juego hace lo mis
 - **Qué son.** Rocas, helechos, plantas tropicales, flores, plantas flotantes del lago, un busto de mármol y una estatua gótica.
   - Todas son **modelos 3D fotoescaneados** de [Poly Haven](https://polyhaven.com) (CC0).
   - Se fotografían en un estudio de render propio, con la misma cámara y la misma luz que el juego. Ver [Estudio de render](#estudio-de-render).
-- **Cómo se pintan.** Cada celda toma el **color real** de la imagen y un glifo de la **rampa de 70 caracteres del repo**:
-  - **Zonas lisas** (celda entera dentro de la silueta, sin detalle): el glifo del repo tal cual, `min(floor(L·N/255), N−1)`.
-  - **Bordes y detalles:** el glifo de la misma rampa cuya **forma** se parece más a la celda. El borde de arriba de una roca sale con `_`, el de abajo con `"`, un tallo con `|` y un brillo pequeño con `,`.
-    - La forma se compara en una rejilla de 3×5 regiones: la tinta de cada región (brillo × alfa) frente a la cobertura de cada glifo.
-    - La cobertura se mide en la fuente del juego con la misma disposición que el atlas (`src/data/glyphShapes.json`).
-  - **Color mínimo:** el color nunca baja de un brillo mínimo (conservando el tono), así la cara en sombra no desaparece en la noche.
+- **Cómo se pintan.** La **forma sale del modelo 3D**, no de la textura de la foto: el estudio fotografía también la luz sobre el modelo sin la textura, sus aristas de oclusión (profundidad) y sus pliegues (normales). Cada celda toma el **color real** de la imagen y un glifo de la **rampa de 70 caracteres del repo**:
+  - **Contorno y aristas:** el borde de la silueta y las líneas internas del modelo (una hoja sobre otra, la mandíbula del busto, la junta entre dos cantos) se dibujan con **glifos de línea orientados** según el trazo dentro de la celda: `_ - | / \ ( ) ' .`.
+    - La orientación es el eje mayor de la tinta de la celda (sus momentos, en unidades visuales: la celda mide 3:5).
+    - El borde de arriba de una silueta se dibuja en la celda de encima, como el `_` del ASCII clásico; el resto, por dentro.
+    - Un trazo corto o curvo es una esquina (`'` o `.`) o el extremo redondeado de un cuerpo (`(` o `)`).
+    - Entre piezas solapadas, el contorno de la de delante se dibuja sobre la de detrás.
+  - **Relleno:** el tono de la forma (la luz sobre el modelo, con un poco del detalle de la foto) en una **rampa isótropa** sacada de la misma rampa del repo: `. : ; * + % # & @`. Las líneas son direccionales y el relleno no: así la pieza se lee como un volumen con su contorno y no como letras sueltas.
+  - **Color mínimo:** el color nunca baja de un brillo mínimo (conservando el tono), así la cara en sombra no desaparece en la noche. Las líneas van un 15 % más claras, como los contornos de tinta del terreno.
   - **Fondo de la silueta:** dentro de la silueta, el fondo de la celda toma un **velo tenue del propio color** de la pieza, así se lee como una forma y no como letras sueltas. Se desactiva con la tecla 8 del panel F3.
   - Sin tinte de zona, luz, niebla, respiración, contornos, bloom ni post-proceso.
-- **Revelado.** Antes de convertirla, `make_stamps.py` revela la imagen como se revelaría una foto, con los mismos ajustes en todos los fotogramas:
+- **Revelado.** Antes de convertirla, `make_stamps.py` suaviza la silueta (el dentado del escaneo sería ruido en ASCII) y revela la imagen como se revelaría una foto, con los mismos ajustes en todos los fotogramas:
   - niveles automáticos;
   - contraste local de la forma, a unas 1 celda;
   - sombras algo más abiertas;
   - un poco más de saturación.
-- **Bordes.** El único borde de una pieza es el contorno de su imagen: no se añaden líneas, marcos ni cajas.
+- **Bordes.** El único contorno de una pieza es el de su propia imagen (y sus aristas): no se añaden marcos ni cajas.
 - **Rocas `#`.** Se descomponen en rectángulos de hasta 3×2 tiles. Cada uno muestra una roca renderizada **recortada**, estirada a su rectángulo y convertida igual.
   - Hay 14 variantes. Cada zona usa las suyas: rocas con musgo en el bosque, la niebla y el lago, y peñas cálidas en las ruinas. El umbral mezcla ambas.
-  - Entre las variantes de proporción parecida se elige por hash, así que las rocas vecinas no se repiten.
+  - Entre las variantes de proporción parecida se elige por hash; dos rectángulos que se tocan no repiten variante si hay otra, y la mitad sale en espejo. Así un grupo se lee como cantos distintos.
   - La colisión sigue siendo por tile, pero en el render esos tiles ya no se pintan como roca procedural, sin el contorno ni el recorte por tile de las demás rocas.
 - **Excepción al brief.** El brief original decía "no uses imágenes externas"; esta mejora lo cambia a propósito.
   - Solo se aceptan modelos CC0, con la licencia verificada en su página.
@@ -151,10 +153,11 @@ En el juego:
   - Con "efectos reducidos" las piezas quedan quietas en el fotograma 0.
 - **Profundidad.** Si la princesa está más al norte que la base de un objeto, el objeto la tapa: puede pasar por detrás de la estatua o de una planta y asomar por un lado. Cada celda de entidad lleva la fila de sus pies en los flags, y cada celda de pieza, la fila de su base. Una sombra suave bajo los pies asienta a la princesa en el suelo.
 - **Comprobado.** `npm run verify:stamps` hace dos comprobaciones:
-  - que la tabla de formas coincide con los glifos del atlas real;
+  - que los glifos de línea y de relleno son de la rampa del repo y están en el atlas real;
   - que el glifo y el color que dibuja la GPU en cada celda de pieza son, al byte, los que calculó la CPU, en las 9 salas y en tres instantes por sala (así cubre también los fotogramas animados).
 - **Depuración.** La página `/debug/stamps.html` muestra cada estampa:
   - la imagen revelada;
+  - su forma del modelo 3D (el tono en gris y las líneas en ámbar);
   - la pieza tal como se ve en el juego (las animadas, en bucle);
   - la conversión literal del repo, en texto, como referencia.
 
@@ -164,7 +167,7 @@ Un modelo fotoescaneado tiene textura de foto, pero además da control total sob
 
 `tools/render_studio.py` se ejecuta **dentro de Blender** (4.x, Cycles) y fotografía el modelo como el juego mira su mundo:
 
-- **Cámara.** Ortográfica, en 3/4 (50° sobre el horizonte), mirando al norte.
+- **Cámara.** Ortográfica, en 3/4 (50° sobre el horizonte), mirando al norte. El encuadre abarca el objeto entero (también su altura), su sombra en el suelo y, con viento, el vaivén de la punta.
 - **Luz.** Sol desde arriba a la izquierda de la pantalla, con cielo de relleno y exposición de día. Lleva además dos luces sin sombra, para que la forma se lea en ASCII sin cambiar la sombra del suelo:
   - **relleno** (`--fill`), de frente, que abre la cara en sombra;
   - **contorno** (`--rim`), desde atrás, que perfila la silueta.
@@ -173,8 +176,16 @@ Un modelo fotoescaneado tiene textura de foto, pero además da control total sob
 Por cada variante del modelo (un conjunto de rocas trae varias; `--only 1,2` elige cuáles) genera:
 
 - **Objeto.** El objeto con alfa limpio (en las plantas con viento, los fotogramas ocupan su lugar).
+- **Forma** (`<n>.form.png`, una por imagen). Un segundo render del mismo fotograma con los mapas de normales y de relieve apagados, para ver la geometría del modelo y no el relieve fino del escaneo. De sus pasadas de Cycles salen tres canales:
+  - **R, luz:** la irradiancia difusa y transmitida, sin el color de la textura (el sombreado de la forma);
+  - **G, oclusión:** la curvatura de la profundidad, en la superficie de delante de cada salto (una pendiente suave da 0);
+  - **B, pliegues:** el giro de la normal suavizada entre píxeles cercanos.
+
+  Cada canal guarda `sqrt(valor / escala)`. Los umbrales se aplican en `make_stamps.py`, así que se ajustan sin volver a renderizar.
 - **Sombra.** Una pasada con *shadow catcher*: el objeto invisible para la cámara pero proyectando su sombra.
 - **Viento.** Con `--frames`, un bucle de viento: cada vértice se desplaza según su altura, y la base no se mueve.
+
+El JSON de cada variante guarda los parámetros del estudio (resolución, muestras, viento), para poder repetir el render.
 
 ### Cómo añadir un modelo al escenario
 
@@ -193,7 +204,7 @@ Por cada variante del modelo (un conjunto de rocas trae varias; `--only 1,2` eli
    - `use`: `prop` (pieza colocada a mano) o `rockfill` (variante para las rocas `#`);
    - `sizeTiles`: `[ancho, alto]` o `"auto"`. Para una pieza, `"auto"` usa la escala real multiplicada por `scale`; para una roca, el rectángulo de hasta 3×2 tiles con la proporción más parecida;
    - `solid` y `collision` (`alpha` o `base`);
-   - opcionales: `fps` (velocidad del bucle) y `zones` (zonas de una roca).
+   - opcionales: `fps` (velocidad del bucle), `zones` (zonas de una roca) y `form`, que ajusta la forma de esa pieza: `detail` (cuánto detalle de la foto entra en el tono), `occlusion` y `crease` (umbrales de aristas y pliegues) y `silhouette` (suavizado del contorno).
 4. **Procésala:**
    ```bash
    python -m venv .cache/venv-tools && .cache/venv-tools/Scripts/python -m pip install -r tools/requirements.txt   # una vez
@@ -201,10 +212,10 @@ Por cada variante del modelo (un conjunto de rocas trae varias; `--only 1,2` eli
    ```
    El script genera:
    - `src/assets/stamps/<id>.png`, revelada, a 6×10 muestras por celda (una tira vertical si está animada);
+   - `<id>.form.png`, la misma tira con la forma del modelo 3D: R el tono y G las líneas internas;
    - `<id>.shadow.png`, la sombra en la rejilla de sombras (4×4 por celda);
    - `src/data/stamps/<id>.json`, con la huella, la sombra y los créditos;
    - la vista previa literal del repo;
-   - la tabla de formas de glifo;
    - la sección de créditos.
 
    Los renders de `art/renders/` se versionan, así que regenerar las estampas no requiere Blender.
@@ -212,7 +223,8 @@ Por cada variante del modelo (un conjunto de rocas trae varias; `--only 1,2` eli
 6. **Valida** con `npm test` y `npm run verify:stamps`. Los tests comprueban:
    - licencias, tamaños, huellas, fotogramas y sombras;
    - que el port de TypeScript reproduce al 100 % la vista previa literal del repo;
-   - la conversión: el glifo del repo en zonas lisas, la forma en los bordes, el color real y el color mínimo;
+   - la forma: la tira de forma de cada pieza, con tono dentro de la silueta y líneas finas;
+   - la conversión: relleno por tono, contorno y aristas con el glifo de su orientación, el color real y el color mínimo;
    - que la huella cae sobre suelo;
    - que ninguna sala queda bloqueada.
 
@@ -260,11 +272,12 @@ Por cada variante del modelo (un conjunto de rocas trae varias; `--only 1,2` eli
 
 ### Rampas por material
 
-Se ordenan por tinta medida, salvo la del repo y la de luz, que conservan el orden de autor.
+Se ordenan por tinta medida, salvo la del repo, la de luz y la del acantilado, que conservan el orden de autor (la del acantilado ya va ordenada por tinta y es idéntica al relleno de las piezas).
 
 | Material | Rampa |
 |---|---|
-| roca y acantilado | la del repo, letras |
+| acantilado | `. : ; * + % # & @`, isótropa: la misma que rellena las rocas 3D |
+| troncos | la del repo, letras |
 | luz | `˙ · ∘ ✧ ✦` |
 | niebla | `. · ∴ ░ ▒ ▓` |
 | agua | `. ~ ∽ ≈` |
@@ -315,7 +328,7 @@ src/
   systems/               partículas (pool), luciérnagas, cielo, luz en CPU
   ui/                    HUD, overlay F3
   data/                  salas (.txt + .json), mundo, leyenda, paletas, sprites, estampas (generadas)
-  assets/stamps/         estampas procesadas (PNG de 4 muestras por celda)
+  assets/stamps/         estampas procesadas: imagen, forma del modelo 3D y sombra (6×10 muestras por celda)
 art/                     renders del estudio (modelos CC0), manifiesto de licencias y definición de estampas
 docs/                    guía de composición de escenarios
 tests/                   fidelidad dorada, fuente, legibilidad, núcleo, layout, mundo, colisión, sistemas, estampas, conversión, animación, composición

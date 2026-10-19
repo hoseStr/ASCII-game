@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { REPO_RAMP_COMPLEX, convertColor } from '../src/render/ascii';
-import { COLOR_FLOOR } from '../src/render/stampConvert';
+import { COLOR_FLOOR, FILL_GLYPHS, LINE_GLYPHS } from '../src/render/stampConvert';
 import { convertStamp, resampleStamp, stampImageFromRgba } from '../src/render/stamps';
 import {
   PropError,
@@ -75,6 +75,34 @@ describe('estampas: licencias y archivos', () => {
     expect(rendered).toBeGreaterThan(0);
   });
 
+  it('la forma del modelo 3D: misma tira que la imagen, tono dentro de la silueta y líneas internas', () => {
+    let withLines = 0;
+    for (const def of defs.values()) {
+      const img = decodePng(readFileSync(file(`src/assets/stamps/${def.image}`)));
+      const form = decodePng(readFileSync(file(`src/assets/stamps/${def.form}`)));
+      expect([form.width, form.height], def.id).toEqual([img.width, img.height]);
+      let inside = 0;
+      let toned = 0;
+      let lines = 0;
+      let blue = 0;
+      for (let i = 0; i < img.width * img.height; i++) {
+        blue += form.rgba[i * 4 + 2]!;
+        if (img.rgba[i * 4 + 3]! < 128) continue;
+        inside++;
+        if (form.rgba[i * 4]! > 0) toned++;
+        if (form.rgba[i * 4 + 1]! > 127) lines++;
+      }
+      expect(blue, def.id).toBe(0); // B lo escribe el juego (orden de dibujo de cada pieza)
+      // el tono cubre la silueta (la cara más oscura puede llegar a 0)
+      expect(toned / inside, def.id).toBeGreaterThan(0.9);
+      // líneas internas: trazos finos, no manchas (una mata ramificada llega a ~1/4)
+      expect(lines / inside, def.id).toBeLessThan(0.35);
+      if (lines > 0) withLines++;
+    }
+    // el modelo 3D aporta aristas de oclusión o pliegues en la mayoría de las piezas
+    expect(withLines).toBeGreaterThan(defs.size / 2);
+  });
+
   it('fotogramas: el bucle se mueve y la silueta no salta', () => {
     for (const def of defs.values()) {
       if (def.frames <= 1) continue;
@@ -129,6 +157,7 @@ describe('estampas: fidelidad al algoritmo del repo', () => {
 const testDef = (over: Partial<StampDef> = {}): StampDef => ({
   id: 'prueba',
   image: 'prueba.png',
+  form: 'prueba.form.png',
   use: 'prop',
   sizeTiles: [3, 2],
   cells: [15, 6],
@@ -219,8 +248,10 @@ describe('conversión de las piezas reales', () => {
   const cellsOf = (id: string) => {
     const def = defs.get(id)!;
     const png = decodePng(readFileSync(file(`src/assets/stamps/${def.image}`)));
+    const form = decodePng(readFileSync(file(`src/assets/stamps/${def.form}`)));
     const frameH = png.height / def.frames;
-    return convertStamp(stampImageFromRgba(png.rgba.subarray(0, png.width * frameH * 4), png.width, frameH))
+    const frame0 = (p: typeof png) => stampImageFromRgba(p.rgba.subarray(0, p.width * frameH * 4), p.width, frameH);
+    return convertStamp(frame0(png), frame0(form))
       .flat()
       .filter((c) => c.char !== '');
   };
@@ -232,6 +263,19 @@ describe('conversión de las piezas reales', () => {
       for (const c of cells) expect(Math.round(Math.max(c.r, c.g, c.b) * 255), def.id).toBeGreaterThanOrEqual(COLOR_FLOOR);
       // la silueta tiene celdas de borde (cobertura parcial), no solo bloques llenos
       expect(cells.some((c) => c.cov < 0.95), def.id).toBe(true);
+    }
+  });
+
+  it('cada pieza tiene forma: contorno de glifos de línea y relleno isótropo por dentro', () => {
+    for (const def of defs.values()) {
+      const cells = cellsOf(def.id);
+      for (const c of cells) expect(FILL_GLYPHS + LINE_GLYPHS, def.id).toContain(c.char);
+      const lines = cells.filter((c) => LINE_GLYPHS.includes(c.char)).length;
+      expect(lines, def.id).toBeGreaterThan(0);
+      // las piezas con cuerpo (rocas, estatuas) también tienen interior relleno
+      if (def.use === 'rockfill' || def.id.startsWith('rock') || def.id.startsWith('bust') || def.id === 'statue') {
+        expect(cells.length - lines, def.id).toBeGreaterThan(0);
+      }
     }
   });
 

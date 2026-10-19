@@ -1,6 +1,7 @@
 {
   "id": "rock-block",
   "image": "rock-block.png",
+  "form": "rock-block.form.png",
   "use": "prop",
   "sizeTiles": [
     4,
@@ -30,7 +31,7 @@
       3
     ],
     "size": [
-      103,
+      102,
       39
     ]
   },

@@ -1,6 +1,7 @@
 {
   "id": "rock-moss-3",
   "image": "rock-moss-3.png",
+  "form": "rock-moss-3.form.png",
   "use": "rockfill",
   "sizeTiles": [
     2,

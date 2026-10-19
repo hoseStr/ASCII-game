@@ -1,7 +1,7 @@
 /**
  * Verificación de extremo a extremo de las piezas de escenario (renders 3D):
- *  1. La tabla de formas de glifo (src/data/glyphShapes.json, medida por
- *     make_stamps.py en la TTF) coincide con los glifos del atlas real del juego.
+ *  1. Los glifos de línea y de relleno de las piezas son de la rampa del repo y
+ *     están en el atlas real del juego (sin sustitutos).
  *  2. En cada sala, lee de la GPU el glifo y el color de todas las celdas de pieza
  *     y los compara con la conversión hecha en CPU (propLayer.cells): tienen que
  *     coincidir al byte. Las piezas animadas se comprueban en varios instantes
@@ -20,54 +20,14 @@ await page.goto('http://localhost:5194/', { timeout: 120000 }); // el primer arr
 await page.waitForFunction(() => document.body.dataset.ready === '1', null, { timeout: 60000 });
 const report = await page.evaluate(async () => {
   const { glyphIndex } = await import('/src/render/glyphs.ts');
-  const { PROP_RAMP } = await import('/src/render/stampConvert.ts');
-  const shapes = (await import('/src/data/glyphShapes.json')).default;
+  const { FILL_GLYPHS, LINE_GLYPHS, PROP_RAMP } = await import('/src/render/stampConvert.ts');
   const adg = window.__adg;
   const g = adg.game;
   const renderer = adg.renderer();
 
-  // 1 · formas: correlación entre la tabla y la cobertura del atlas en la misma rejilla
+  // 1 · glifos: los de línea y de relleno son de la rampa del repo y están en el atlas
   const atlas = renderer.atlas;
-  const [gx, gy] = shapes.grid;
-  let worst = 1;
-  let worstChar = '';
-  for (let k = 0; k < PROP_RAMP.length; k++) {
-    const ch = PROP_RAMP[k];
-    if (ch === ' ') continue;
-    const i = atlas.index.get(ch);
-    const x0 = (i % atlas.cols) * atlas.cellW;
-    const y0 = Math.floor(i / atlas.cols) * atlas.cellH;
-    const a = [];
-    for (let ry = 0; ry < gy; ry++) {
-      for (let rx = 0; rx < gx; rx++) {
-        let s = 0;
-        let n = 0;
-        for (let y = Math.floor((ry * atlas.cellH) / gy); y < Math.floor(((ry + 1) * atlas.cellH) / gy); y++) {
-          for (let x = Math.floor((rx * atlas.cellW) / gx); x < Math.floor(((rx + 1) * atlas.cellW) / gx); x++) {
-            s += atlas.pixels[(y0 + y) * atlas.canvas.width + x0 + x] / 255;
-            n++;
-          }
-        }
-        a.push(s / n);
-      }
-    }
-    const b = shapes.coverage[k];
-    const ma = a.reduce((p, v) => p + v, 0) / a.length;
-    const mb = b.reduce((p, v) => p + v, 0) / b.length;
-    let num = 0;
-    let da = 0;
-    let db = 0;
-    for (let j = 0; j < a.length; j++) {
-      num += (a[j] - ma) * (b[j] - mb);
-      da += (a[j] - ma) ** 2;
-      db += (b[j] - mb) ** 2;
-    }
-    const corr = da > 0 && db > 0 ? num / Math.sqrt(da * db) : 1;
-    if (corr < worst) {
-      worst = corr;
-      worstChar = ch;
-    }
-  }
+  const missing = [...(FILL_GLYPHS + LINE_GLYPHS)].filter((ch) => !PROP_RAMP.includes(ch) || atlas.missing.includes(ch) || !atlas.index.has(ch));
 
   // 2 · piezas: GPU = CPU en todas las salas, en tres instantes
   adg.settings.fidelity = false;
@@ -108,9 +68,9 @@ const report = await page.evaluate(async () => {
     const animated = g.room.props.filter((p) => p.def.frames > 1).length;
     out.push({ room: id, pieces: g.room.props.length + g.room.rockFills.length, animated, states: seen.size, cells: total, ok, bad });
   }
-  return { worst, worstChar, rooms: out };
+  return { missing, rooms: out };
 });
-console.log(`formas de glifo: correlación mínima tabla/atlas = ${report.worst.toFixed(3)} ('${report.worstChar}')`);
+console.log(`glifos de las piezas: ${report.missing.length ? `faltan ${report.missing.join(' ')}` : 'todos en la rampa del repo y en el atlas'}`);
 for (const r of report.rooms) {
   console.log(
     `${r.room} piezas=${String(r.pieces).padStart(2)} animadas=${r.animated} estados=${r.states} celdas=${String(r.cells).padStart(4)} coinciden=${r.ok}/${r.cells}`,
@@ -121,12 +81,11 @@ for (const r of report.rooms) {
 const frozen = report.rooms.filter((r) => r.animated > 0 && r.states < 2);
 for (const r of frozen) console.log(`   ${r.room}: las piezas animadas no cambiaron de fotograma`);
 const bad = report.rooms.filter((r) => r.ok !== r.cells).concat(frozen);
-const shapesOk = report.worst > 0.85;
-if (!shapesOk) console.log('   la tabla de formas no coincide con el atlas: regenera con tools/make_stamps.py');
+const glyphsOk = report.missing.length === 0;
 const total = report.rooms.reduce((a, r) => a + r.cells, 0);
 console.log(
-  bad.length || !shapesOk ? `FALLAN ${bad.length} salas` : `OK: las ${total} celdas de pieza (3 instantes por sala) coinciden al byte con la conversión en CPU`,
+  bad.length || !glyphsOk ? `FALLAN ${bad.length} salas` : `OK: las ${total} celdas de pieza (3 instantes por sala) coinciden al byte con la conversión en CPU`,
 );
 await browser.close();
 await server.close();
-process.exit(bad.length || !shapesOk ? 1 : 0);
+process.exit(bad.length || !glyphsOk ? 1 : 0);

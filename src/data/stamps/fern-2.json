@@ -1,6 +1,7 @@
 {
   "id": "fern-2",
   "image": "fern-2.png",
+  "form": "fern-2.form.png",
   "use": "prop",
   "sizeTiles": [
     3,

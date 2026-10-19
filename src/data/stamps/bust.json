@@ -1,14 +1,15 @@
 {
   "id": "bust",
   "image": "bust.png",
+  "form": "bust.form.png",
   "use": "prop",
   "sizeTiles": [
-    2,
-    3
+    4,
+    4
   ],
   "cells": [
-    10,
-    9
+    20,
+    12
   ],
   "samples": [
     6,
@@ -17,21 +18,22 @@
   "solid": true,
   "shadow": "render",
   "footprint": [
-    "..",
-    "..",
-    "##"
+    "....",
+    "....",
+    "....",
+    ".##."
   ],
   "frames": 1,
   "fps": 0,
   "shadowImage": {
     "image": "bust.shadow.png",
     "offset": [
-      5,
-      23
+      20,
+      32
     ],
     "size": [
-      71,
-      36
+      90,
+      45
     ]
   },
   "credits": {

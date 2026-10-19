@@ -1,6 +1,7 @@
 {
   "id": "fern-1",
   "image": "fern-1.png",
+  "form": "fern-1.form.png",
   "use": "prop",
   "sizeTiles": [
     4,
@@ -26,12 +27,12 @@
   "shadowImage": {
     "image": "fern-1.shadow.png",
     "offset": [
-      3,
+      2,
       8
     ],
     "size": [
       86,
-      33
+      34
     ]
   },
   "credits": {

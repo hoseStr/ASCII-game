@@ -22,6 +22,7 @@ Las salas se veían "regadas a la loca" porque los elementos estaban repartidos 
 ### 1. Jerarquía: un héroe, apoyos y relleno
 
 - **Cada sala tiene una sola pieza héroe:** el punto focal, única en la sala y con espacio libre alrededor. Se marca con `"hero": true` en el JSON de la sala.
+- **El héroe es grande.** En ASCII, una forma necesita celdas para leerse: una estatua o un busto a 10×9 celdas son una mancha. Por eso la estatua mide 5×5 tiles (25×15 celdas) y el busto héroe 4×4 (20×12). Un busto de apoyo usa `bust-small` (2×3), que no compite con el héroe.
 - **Alrededor, uno o dos grupos de apoyo y algo de relleno.**
 - **Con mesura.** Demasiados focos confunden: el ojo no sabe dónde posarse. Un héroe que se repite deja de serlo.
 
@@ -100,15 +101,15 @@ Cada sala conserva su isla, sus caminos, su agua, sus puentes y sus salidas. Sol
 
 | Sala | Intención | Héroe | Apoyos |
 |---|---|---|---|
-| Jardín de Cristal (`ow-0-0`) | Jardín formal: el eje norte-sur termina en el busto. | Busto, flanqueado por dos gazanias | Parterres simétricos alrededor de la plazuela; cuatro faroles en las diagonales; dos leipoldtias enmarcando la avenida del este. |
-| Escalinata Lunar (`ow-1-0`) | Patio de un templo en ruinas: la estatua remata el eje desde la escalinata. | Estatua | Escombros en dos grupos en diagonal (NE grande, SO pequeño); faroles en la puerta sur; busto al este. El patio queda vacío. |
-| Umbral del Santuario (`ow-2-0`) | Anfiteatro de roca (más grueso al oeste) como fondo del santuario. | Estatua, con un farol a cada lado | Salida sur enmarcada por la pila de rocas y un grupo pequeño. La entrada oeste, despejada. |
+| Jardín de Cristal (`ow-0-0`) | Jardín formal: el eje norte-sur termina en el busto. | Busto (4×4), flanqueado por dos gazanias | Parterres simétricos alrededor de la plazuela; cuatro faroles en las diagonales; dos leipoldtias enmarcando la avenida del este. |
+| Escalinata Lunar (`ow-1-0`) | Patio de un templo en ruinas: la estatua remata el eje desde la escalinata. | Estatua (5×5), centrada en el eje | Escombros en dos grupos en diagonal (NE grande, SO pequeño); faroles en la puerta sur; busto pequeño al este. El patio queda vacío. |
+| Umbral del Santuario (`ow-2-0`) | Anfiteatro de roca (más grueso al oeste) como fondo del santuario. | Estatua (5×5), entre los dos faroles y delante del anfiteatro | Salida sur enmarcada por la pila de rocas y un grupo pequeño. La entrada oeste, despejada. |
 | Bosque Hondo (`ow-0-1`) | El bosque enmarca el borde (más denso al norte y al oeste); el claro del este, abierto. | Roca grande | Anthurium y helecho pegados a la roca (un solo grupo); un helecho al pie del bosque del NO. |
 | Claro de las Luciérnagas (`ow-1-1`, inicio) | Anillo de árboles asimétrico, pesado al norte; el cruce, despejado. | Anthurium en el tercio NE, con su farol | Helechos al pie de los árboles del NO; calathea y helecho al SO; una franja de flores al SE. |
 | Orilla de los Espejos (`ow-2-1`) | Orilla oeste con peso; el agua del SE, libre. | Roca alta junto a la salida oeste | Hojas flotantes agrupadas cerca de esa orilla; franja de flores que se afina hacia el SO. |
 | Raíces Colgantes (`ow-0-2`) | Bosque al NO como fondo; el puente lleva a un farol en la otra isla. | Roca redonda | Helecho a su pie, que enmarca la entrada norte; helecho grande al pie del bosque; flores al sur. |
 | Puente de Niebla (`ow-1-2`) | Isla serena con poco: la niebla es el vacío. | Roca alta al NE | Planta y árbol al NO; el farol al sur, en el eje, con su franja de flores; dos islotes de roca a los lados de los puentes. |
-| Lago de los Espejos (`ow-2-2`) | La isla central es un santuario sobre el agua. | Busto, con farol y flores | Hojas flotantes en dos grupos en diagonal: dos al SO y una al NE. |
+| Lago de los Espejos (`ow-2-2`) | La isla central es un santuario sobre el agua. | Busto (4×4), con farol y flores | Hojas flotantes en dos grupos en diagonal: dos al SO y una al NE. |
 
 ## Fuentes
 

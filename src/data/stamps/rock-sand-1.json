@@ -1,6 +1,7 @@
 {
   "id": "rock-sand-1",
   "image": "rock-sand-1.png",
+  "form": "rock-sand-1.form.png",
   "use": "rockfill",
   "sizeTiles": [
     2,

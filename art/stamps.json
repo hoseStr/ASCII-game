@@ -146,7 +146,7 @@
       "variant": "v5",
       "use": "prop",
       "sizeTiles": [
-        4,
+        3,
         3
       ],
       "solid": false,
@@ -198,6 +198,18 @@
       "variant": "v0",
       "use": "prop",
       "sizeTiles": [
+        4,
+        4
+      ],
+      "solid": true,
+      "collision": "base"
+    },
+    {
+      "id": "bust-small",
+      "source": "ph-marble_bust_01",
+      "variant": "v0",
+      "use": "prop",
+      "sizeTiles": [
         2,
         3
       ],
@@ -210,8 +222,8 @@
       "variant": "v0",
       "use": "prop",
       "sizeTiles": [
-        3,
-        3
+        5,
+        5
       ],
       "solid": true,
       "collision": "base"

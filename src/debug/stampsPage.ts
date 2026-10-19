@@ -1,8 +1,9 @@
 /**
  * Página de depuración de las estampas (piezas de escenario hechas con renders de
- * modelos 3D): imagen revelada, la pieza tal como se ve en el juego (conversión de
- * stampConvert.ts, colores reales y fondo de la silueta; las animadas en bucle),
- * la conversión literal del repo (texto) y la licencia.
+ * modelos 3D): imagen revelada, su forma (tono y líneas del modelo 3D), la pieza
+ * tal como se ve en el juego (conversión de stampConvert.ts, colores reales y
+ * fondo de la silueta; las animadas en bucle), la conversión literal del repo
+ * (texto) y la licencia.
  */
 import { FONT_FAMILY } from '../render/atlas';
 import { loadGameFont } from '../render/fontLoader';
@@ -48,9 +49,28 @@ function pngCanvas(img: StampImage, scale: number): HTMLCanvasElement {
   return c;
 }
 
-/** La pieza como en el juego: celdas 3:5, glifo por forma/tono, color real y fondo de la silueta. */
-function gameCanvas(img: StampImage, paper: [number, number, number]): HTMLCanvasElement {
-  const cells = convertStamp(img);
+/** Forma del modelo 3D: tono en gris y líneas en ámbar. */
+function formCanvas(img: StampImage, form: StampImage, scale: number): HTMLCanvasElement {
+  const c = document.createElement('canvas');
+  c.width = img.w * scale;
+  c.height = img.h * scale;
+  const ctx = c.getContext('2d')!;
+  for (let y = 0; y < img.h; y++) {
+    for (let x = 0; x < img.w; x++) {
+      const i = (y * img.w + x) * 4;
+      if (img.data[i + 3]! < 128) continue;
+      const t = form.data[i]!;
+      const l = form.data[i + 1]! / 255;
+      ctx.fillStyle = `rgb(${Math.round(t + (255 - t) * l)},${Math.round(t + (190 - t) * l)},${Math.round(t * (1 - l))})`;
+      ctx.fillRect(x * scale, y * scale, scale, scale);
+    }
+  }
+  return c;
+}
+
+/** La pieza como en el juego: celdas 3:5, líneas y relleno de la forma, color real y fondo de la silueta. */
+function gameCanvas(img: StampImage, form: StampImage, paper: [number, number, number]): HTMLCanvasElement {
+  const cells = convertStamp(img, form);
   const cw = 12;
   const ch = 20;
   const c = document.createElement('canvas');
@@ -87,7 +107,7 @@ async function main(): Promise<void> {
   root.appendChild(mainEl);
   mainEl.innerHTML = `
     <h1>Estampas: modelos 3D convertidos en piezas de escenario</h1>
-    <p class="note">Cada pieza parte de un modelo 3D fotoescaneado CC0 (Poly Haven), fotografiado con tools/render_studio.py. tools/make_stamps.py lo encaja a 6×10 muestras por celda y lo revela (niveles, contraste local, saturación). En el juego, cada celda toma el color real de la imagen y un glifo de la rampa de 70 del repo: el del repo en las zonas lisas y, en los bordes y detalles, el de forma más parecida. Dentro de la silueta, un velo tenue del propio color. Sin tinte, luz, niebla ni contornos. Las piezas animadas se reproducen aquí en bucle.</p>`;
+    <p class="note">Cada pieza parte de un modelo 3D fotoescaneado CC0 (Poly Haven), fotografiado con tools/render_studio.py junto con su forma: la luz sin la textura, las aristas de oclusión y los pliegues del modelo. tools/make_stamps.py lo encaja a 6×10 muestras por celda y lo revela. En el juego, el contorno y las aristas se dibujan con glifos de línea orientados según el trazo (_ - | / \\ ( ) ' .) y el interior con una rampa isótropa por el tono de la forma (. : ; * + % # &amp; @), todos de la rampa de 70 del repo, con el color real de la imagen. Dentro de la silueta, un velo tenue del propio color. Las piezas animadas se reproducen aquí en bucle.</p>`;
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   for (const def of [...defs.values()].sort((a, b) => a.id.localeCompare(b.id))) {
     const asset = images.get(def.id)!;
@@ -120,11 +140,12 @@ async function main(): Promise<void> {
       row.appendChild(d);
     };
     fig('imagen revelada', pngCanvas(img, 2));
-    const game = gameCanvas(img, paper);
+    fig('forma del modelo 3D (tono; líneas en ámbar)', formCanvas(img, asset.forms[0]!, 2));
+    const game = gameCanvas(img, asset.forms[0]!, paper);
     fig(`en el juego (colores reales${def.frames > 1 ? `, ${def.fps} fps` : ''})`, game);
     if (def.frames > 1 && !reduced) {
       // bucle de animación: cada fotograma convertido con el mismo algoritmo
-      const frames = asset.frames.map((f) => gameCanvas(f, paper));
+      const frames = asset.frames.map((f, k) => gameCanvas(f, asset.forms[k]!, paper));
       const ctx = game.getContext('2d')!;
       let k = 0;
       setInterval(() => {

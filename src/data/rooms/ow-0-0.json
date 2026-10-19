@@ -8,8 +8,8 @@
     {
       "stamp": "bust",
       "tile": [
-        12,
-        2
+        11,
+        1
       ],
       "hero": true
     },
@@ -38,7 +38,7 @@
     {
       "stamp": "gazania",
       "tile": [
-        14,
+        15,
         2
       ],
       "flip": true

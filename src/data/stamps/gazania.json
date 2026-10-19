@@ -1,13 +1,14 @@
 {
   "id": "gazania",
   "image": "gazania.png",
+  "form": "gazania.form.png",
   "use": "prop",
   "sizeTiles": [
-    4,
+    3,
     3
   ],
   "cells": [
-    20,
+    15,
     9
   ],
   "samples": [
@@ -17,21 +18,21 @@
   "solid": false,
   "shadow": "render",
   "footprint": [
-    "....",
-    "....",
-    "...."
+    "...",
+    "...",
+    "..."
   ],
   "frames": 12,
   "fps": 6,
   "shadowImage": {
     "image": "gazania.shadow.png",
     "offset": [
-      25,
-      32
+      18,
+      33
     ],
     "size": [
-      78,
-      33
+      59,
+      25
     ]
   },
   "credits": {

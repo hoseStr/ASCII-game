@@ -1,6 +1,7 @@
 {
   "id": "anthurium-2",
   "image": "anthurium-2.png",
+  "form": "anthurium-2.form.png",
   "use": "prop",
   "sizeTiles": [
     4,
@@ -26,12 +27,12 @@
   "shadowImage": {
     "image": "anthurium-2.shadow.png",
     "offset": [
-      11,
-      -1
+      12,
+      -7
     ],
     "size": [
-      98,
-      50
+      106,
+      56
     ]
   },
   "credits": {

@@ -1,6 +1,7 @@
 {
   "id": "leipoldtia",
   "image": "leipoldtia.png",
+  "form": "leipoldtia.form.png",
   "use": "prop",
   "sizeTiles": [
     4,
@@ -27,11 +28,11 @@
     "image": "leipoldtia.shadow.png",
     "offset": [
       3,
-      -4
+      -5
     ],
     "size": [
-      96,
-      47
+      100,
+      48
     ]
   },
   "credits": {

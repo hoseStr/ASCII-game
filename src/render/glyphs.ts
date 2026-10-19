@@ -7,7 +7,7 @@
 import { REPO_RAMP_COMPLEX } from './ascii';
 
 /** Materiales de la capa pictórica. El id es el índice (se codifica en el shader). */
-export const MATERIALS = ['base', 'light', 'mist', 'water', 'veg', 'crystal', 'flower', 'path', 'foliage'] as const;
+export const MATERIALS = ['base', 'light', 'mist', 'water', 'veg', 'crystal', 'flower', 'path', 'foliage', 'cliff'] as const;
 export type Material = (typeof MATERIALS)[number];
 export const MATERIAL_ID: Record<Material, number> = {
   base: 0,
@@ -19,6 +19,7 @@ export const MATERIAL_ID: Record<Material, number> = {
   flower: 6,
   path: 7,
   foliage: 8,
+  cliff: 9,
 };
 
 export interface RampDef {
@@ -50,6 +51,9 @@ export const RAMPS: Record<Material, RampDef> = {
   path: { glyphs: ' .·∶:∴∷', order: 'measured' },
   // Copas de los árboles (obstáculos): follaje denso, distinto del pasto.
   foliage: { glyphs: ' ·τ↟♠♣ψΨ', order: 'measured' },
+  // Acantilados: la misma rampa isótropa del repo que rellena las rocas 3D
+  // (render/stampConvert.ts), así toda la roca se lee como volumen y no como letras.
+  cliff: { glyphs: ' .:;*+%#&@', order: 'authored' },
 };
 
 /**

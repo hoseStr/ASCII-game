@@ -1,6 +1,7 @@
 {
   "id": "rock-round",
   "image": "rock-round.png",
+  "form": "rock-round.form.png",
   "use": "prop",
   "sizeTiles": [
     3,

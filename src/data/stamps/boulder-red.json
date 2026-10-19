@@ -1,6 +1,7 @@
 {
   "id": "boulder-red",
   "image": "boulder-red.png",
+  "form": "boulder-red.form.png",
   "use": "rockfill",
   "sizeTiles": [
     2,
@@ -29,8 +30,8 @@
       3
     ],
     "size": [
-      45,
-      31
+      55,
+      33
     ]
   },
   "credits": {

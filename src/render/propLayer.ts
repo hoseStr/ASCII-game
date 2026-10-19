@@ -2,6 +2,9 @@
  * Capa de piezas de una sala, compuesta en CPU al entrar:
  *  - rgb:     bytes de la imagen de cada pieza (RGBA8, sin premultiplicar), a
  *             PROP_SX × PROP_SY muestras por celda (proporción de la celda, 3:5).
+ *  - form:    la forma del modelo 3D en las mismas muestras (R tono, G líneas) y,
+ *             en B, el orden de dibujo + 1 de la pieza que ocupa la muestra: el
+ *             contorno de la pieza de delante se dibuja sobre la de detrás.
  *  - cells:   la pieza YA convertida a ASCII, por celda (ver stampConvert.ts):
  *             r, g, b del color y posición en la rampa + 1 (0 = sin pieza). Se sube
  *             tal cual a la GPU; la composición solo la dibuja.
@@ -12,7 +15,8 @@
  *             máxima), a SHADOW_S × SHADOW_S muestras por celda. Se usa la sombra
  *             renderizada de la estampa; una pieza en espejo proyecta su silueta.
  * Piezas animadas: animate() cambia de fotograma, recompone y reconvierte SOLO
- * las celdas de cada pieza que cambió y deja anotados esos rectángulos para
+ * las celdas de cada pieza que cambió (más un anillo de una celda: el contorno
+ * de arriba cae en la celda de encima) y deja anotados esos rectángulos para
  * subirlos a la GPU (sin allocations).
  */
 import { CELL_ASPECT, GRID_COLS, GRID_ROWS } from '../config';
@@ -41,6 +45,7 @@ const IMG_SAMPLE_H = 1 / PROP_SY; // unidades por fila de muestras de imagen
 
 interface Piece {
   frames: StampImage[];
+  forms: StampImage[];
   shadow: GrayImage | null;
   /** desplazamiento de la sombra renderizada, en muestras de sombra */
   shadowX: number;
@@ -52,6 +57,8 @@ interface Piece {
   fps: number;
   phase: number;
   cur: number;
+  /** orden de dibujo + 1 (canal B de la capa de forma) */
+  order: number;
 }
 
 /**
@@ -95,6 +102,8 @@ function resampleGray(img: GrayImage, w: number, h: number): GrayImage {
 
 export class PropLayer {
   readonly rgb = new Uint8Array(PROP_W * PROP_H * 4);
+  /** forma de las piezas en las mismas muestras: R tono, G líneas, B orden de dibujo + 1 */
+  readonly form = new Uint8Array(PROP_W * PROP_H * 4);
   /** por celda: r, g, b, posición en la rampa + 1 (0 = sin pieza); textura RGBA8UI */
   readonly cells = new Uint8Array(GRID_COLS * GRID_ROWS * 4);
   /** por celda: fila de base + 1 (0 = sin pieza) y cobertura 0..255; textura RG8UI */
@@ -108,7 +117,7 @@ export class PropLayer {
   private readonly mark = new Uint32Array(GRID_COLS * GRID_ROWS);
   private gen = 0;
   /** rocas ya estiradas a un rectángulo (id + tamaño): al volver a una sala no se recalculan */
-  private readonly rockCache = new Map<string, { frames: StampImage[]; shadow: GrayImage | null }>();
+  private readonly rockCache = new Map<string, { frames: StampImage[]; forms: StampImage[]; shadow: GrayImage | null }>();
   private sx0 = 0;
   private sx1 = -1;
   private sy0 = 0;
@@ -128,6 +137,7 @@ export class PropLayer {
   build(props: PlacedProp[], rockFills: RockFill[], images: Map<string, StampAsset>): void {
     const t0 = performance.now();
     this.rgb.fill(0);
+    this.form.fill(0);
     this.cells.fill(0);
     this.baseCov.fill(0);
     this.shadowF.fill(0);
@@ -152,20 +162,22 @@ export class PropLayer {
           asset.shadow && r.def.shadowImage
             ? resampleGray(asset.shadow, Math.max(1, Math.round(asset.shadow.w * fx)), Math.max(1, Math.round(asset.shadow.h * fy)))
             : null;
-        fit = { frames: asset.frames.map((f) => resampleStamp(f, w, h)), shadow };
+        fit = { frames: asset.frames.map((f) => resampleStamp(f, w, h)), forms: asset.forms.map((f) => resampleStamp(f, w, h)), shadow };
         this.rockCache.set(key, fit);
       }
       pieces.push({
         frames: fit.frames,
+        forms: fit.forms,
         shadow: fit.shadow,
         shadowX: Math.round((r.def.shadowImage?.offset[0] ?? 0) * fx),
         shadowY: Math.round((r.def.shadowImage?.offset[1] ?? 0) * fy),
         ox: r.tx0 * TILE_COLS * PROP_SX,
         oy: (HUD_ROWS + r.ty0 * TILE_ROWS) * PROP_SY,
-        flip: false,
+        flip: r.flip,
         fps: 0,
         phase: 0,
         cur: 0,
+        order: pieces.length + 1,
       });
     }
     for (const p of props) {
@@ -173,6 +185,7 @@ export class PropLayer {
       if (!asset) continue;
       pieces.push({
         frames: asset.frames,
+        forms: asset.forms,
         shadow: asset.shadow,
         shadowX: p.def.shadowImage?.offset[0] ?? 0,
         shadowY: p.def.shadowImage?.offset[1] ?? 0,
@@ -183,6 +196,7 @@ export class PropLayer {
         // fase por posición: dos plantas iguales no se mecen al unísono
         phase: ((p.tx * 7 + p.ty * 13) % 17) / 17,
         cur: 0,
+        order: pieces.length + 1,
       });
     }
     // Primero todas las sombras (caen sobre el suelo), luego las imágenes encima.
@@ -194,16 +208,16 @@ export class PropLayer {
     this.blurShadow();
     for (const pc of pieces) {
       this.markBase(pc);
-      this.blit(pc.frames[0]!, pc.ox, pc.oy, pc.flip, 0, 0, PROP_W - 1, PROP_H - 1);
+      this.blit(pc, 0, 0, 0, PROP_W - 1, PROP_H - 1);
     }
-    // conversión: solo las celdas de cada pieza (una vez cada una aunque se solapen)
+    // conversión: solo las celdas de cada pieza y su anillo (una vez cada una aunque se solapen)
     const gen = ++this.gen;
     for (const pc of pieces) {
       const img = pc.frames[0]!;
-      const cx0 = Math.max(0, Math.floor(pc.ox / PROP_SX));
-      const cy0 = Math.max(0, Math.floor(pc.oy / PROP_SY));
-      const cx1 = Math.min(GRID_COLS - 1, Math.floor((pc.ox + img.w - 1) / PROP_SX));
-      const cy1 = Math.min(GRID_ROWS - 1, Math.floor((pc.oy + img.h - 1) / PROP_SY));
+      const cx0 = Math.max(0, Math.floor(pc.ox / PROP_SX) - 1);
+      const cy0 = Math.max(0, Math.floor(pc.oy / PROP_SY) - 1);
+      const cx1 = Math.min(GRID_COLS - 1, Math.floor((pc.ox + img.w - 1) / PROP_SX) + 1);
+      const cy1 = Math.min(GRID_ROWS - 1, Math.floor((pc.oy + img.h - 1) / PROP_SY) + 1);
       this.convertCells(cx0, cy0, cx1, cy1, gen);
     }
     this.pieces = pieces;
@@ -229,10 +243,11 @@ export class PropLayer {
       if (f === pc.cur) continue;
       pc.cur = f;
       const img = pc.frames[f]!;
-      const x0 = Math.max(0, Math.floor(pc.ox / PROP_SX));
-      const y0 = Math.max(0, Math.floor(pc.oy / PROP_SY));
-      const x1 = Math.min(GRID_COLS - 1, Math.floor((pc.ox + img.w - 1) / PROP_SX));
-      const y1 = Math.min(GRID_ROWS - 1, Math.floor((pc.oy + img.h - 1) / PROP_SY));
+      // la pieza y su anillo de una celda (contorno de arriba y vecinas de las muestras del borde)
+      const x0 = Math.max(0, Math.floor(pc.ox / PROP_SX) - 1);
+      const y0 = Math.max(0, Math.floor(pc.oy / PROP_SY) - 1);
+      const x1 = Math.min(GRID_COLS - 1, Math.floor((pc.ox + img.w - 1) / PROP_SX) + 1);
+      const y1 = Math.min(GRID_ROWS - 1, Math.floor((pc.oy + img.h - 1) / PROP_SY) + 1);
       if (count < MAX_DIRTY) {
         r[count * 4] = x0;
         r[count * 4 + 1] = y0;
@@ -258,12 +273,15 @@ export class PropLayer {
     const y0 = cy0 * PROP_SY;
     const x1 = (cx1 + 1) * PROP_SX - 1;
     const y1 = (cy1 + 1) * PROP_SY - 1;
-    for (let y = y0; y <= y1; y++) this.rgb.fill(0, (y * PROP_W + x0) * 4, (y * PROP_W + x1 + 1) * 4);
+    for (let y = y0; y <= y1; y++) {
+      this.rgb.fill(0, (y * PROP_W + x0) * 4, (y * PROP_W + x1 + 1) * 4);
+      this.form.fill(0, (y * PROP_W + x0) * 4, (y * PROP_W + x1 + 1) * 4);
+    }
     for (let i = 0; i < this.pieces.length; i++) {
       const pc = this.pieces[i]!;
       const img = pc.frames[pc.cur]!;
       if (pc.ox > x1 || pc.oy > y1 || pc.ox + img.w - 1 < x0 || pc.oy + img.h - 1 < y0) continue;
-      this.blit(img, pc.ox, pc.oy, pc.flip, x0, y0, x1, y1);
+      this.blit(pc, pc.cur, x0, y0, x1, y1);
     }
     this.convertCells(cx0, cy0, cx1, cy1);
   }
@@ -281,7 +299,7 @@ export class PropLayer {
           if (this.mark[i] === gen) continue;
           this.mark[i] = gen;
         }
-        convertCell(this.rgb, PROP_W, cx * PROP_SX, cy * PROP_SY, res);
+        convertCell(this.rgb, this.form, PROP_W, PROP_H, cx * PROP_SX, cy * PROP_SY, res);
         const o = i * 4;
         if (res.pos < 0) {
           this.cells[o] = this.cells[o + 1] = this.cells[o + 2] = this.cells[o + 3] = 0;
@@ -415,24 +433,30 @@ export class PropLayer {
   }
 
   /**
-   * Copia los bytes de una imagen a la capa, recortando al rectángulo
-   * [cx0..cx1]×[cy0..cy1] (muestras). Una pieza más al sur tapa a la anterior: la
-   * muestra se reemplaza (sin mezclar colores, para conservar los bytes de la imagen).
+   * Copia los bytes del fotograma `frame` de una pieza (imagen y forma) a la capa,
+   * recortando al rectángulo [cx0..cx1]×[cy0..cy1] (muestras). Una pieza más al sur
+   * tapa a la anterior: la muestra se reemplaza (sin mezclar colores, para
+   * conservar los bytes de la imagen) y queda marcada con su orden de dibujo.
    */
-  private blit(img: StampImage, ox: number, oy: number, flip: boolean, cx0: number, cy0: number, cx1: number, cy1: number): void {
+  private blit(pc: Piece, frame: number, cx0: number, cy0: number, cx1: number, cy1: number): void {
+    const img = pc.frames[frame]!;
+    const form = pc.forms[frame]!.data;
     for (let y = 0; y < img.h; y++) {
-      const dy = oy + y;
+      const dy = pc.oy + y;
       if (dy < cy0 || dy > cy1) continue;
       for (let x = 0; x < img.w; x++) {
-        const dx = ox + x;
+        const dx = pc.ox + x;
         if (dx < cx0 || dx > cx1) continue;
-        const si = (y * img.w + (flip ? img.w - 1 - x : x)) * 4;
+        const si = (y * img.w + (pc.flip ? img.w - 1 - x : x)) * 4;
         if (img.data[si + 3]! === 0) continue;
         const di = (dy * PROP_W + dx) * 4;
         this.rgb[di] = img.data[si]!;
         this.rgb[di + 1] = img.data[si + 1]!;
         this.rgb[di + 2] = img.data[si + 2]!;
         this.rgb[di + 3] = img.data[si + 3]!;
+        this.form[di] = form[si]!;
+        this.form[di + 1] = form[si + 1]!;
+        this.form[di + 2] = pc.order;
       }
     }
   }

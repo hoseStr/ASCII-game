@@ -1,6 +1,7 @@
 {
   "id": "calathea-1",
   "image": "calathea-1.png",
+  "form": "calathea-1.form.png",
   "use": "prop",
   "sizeTiles": [
     3,
@@ -18,7 +19,7 @@
   "shadow": "render",
   "footprint": [
     "...",
-    "##."
+    ".#."
   ],
   "frames": 12,
   "fps": 5,
@@ -29,7 +30,7 @@
       9
     ],
     "size": [
-      66,
+      64,
       27
     ]
   },

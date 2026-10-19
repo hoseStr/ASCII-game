@@ -205,7 +205,8 @@ void main() {
   col *= uExposure;
 
   // --- material dominante ---------------------------------------------------------
-  // El vacío y la niebla usan la rampa de niebla; la roca, las letras del repo.
+  // El vacío y la niebla usan la rampa de niebla; el acantilado, la rampa isótropa de
+  // la roca (la misma que rellena las rocas 3D); los troncos, las letras del repo.
   float surfW = kind == K_VOID ? 0.0 : groundA * 0.85;
   float wLight = luminance(glow + starLight * (1.0 - groundA) * (1.0 - cliffA)) * 4.0;
   float wMist = max(fogA * 3.0 * (1.0 - 0.75 * groundA), 0.05);
@@ -213,7 +214,7 @@ void main() {
   float best = wMist;
   float mat = float(MAT_MIST);
   float wBase = cliffA * 0.9;
-  if (wBase > best) { best = wBase; mat = float(MAT_BASE); }
+  if (wBase > best) { best = wBase; mat = float(MAT_CLIFF); }
   if (surfW > best) {
     best = surfW;
     mat = float(MAT_VEG);
